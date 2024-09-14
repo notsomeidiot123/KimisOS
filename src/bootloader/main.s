@@ -1,3 +1,8 @@
+;   Kimi's Bootloader - Custom Booting solution for Kimi's OS
+;   (c) 2024 Notsomeidiot123 on Github
+;   Documentation available at https://github.com/notsomeidiot123/KimisOS
+
+
 org 0x7c00
 
 bits 16
@@ -9,18 +14,19 @@ bits 16
 %endmacro
 
 ;TODO:
-;Enable A20 line
-;Enable unreal mode
-;Load GDT
-;Load part2
-;Set video mode
-;get memory map
-;enable paging
-;read filesystem
-;load kernel
-;parse ELF format
-;pass memory and video information to kernel
-;relocate and jump to kernel
+;Enable A20 line                            |x|
+;Enable unreal mode                         |x|
+;Load GDT                                   |x|
+;Load part2                                 |x|
+;Get video mode information                 |0|
+;Set video mode                             |0|
+;get memory map                             |0|
+;enable paging                              |0|
+;read filesystem                            |0|
+;load kernel                                |0|
+;parse ELF format                           |0|
+;pass memory and video information to kernel|0|
+;relocate and jump to kernel                |0|
 
 jump:
     jmp short start
@@ -88,6 +94,7 @@ start:
     mov ds, bx
     mov [data.part_seg], ax
     mov [data.part_off], si
+    mov [data.boot_disc], dl
     jmp 0:set_cs
 set_cs:
     xor cx, cx
@@ -113,7 +120,7 @@ enable_a20:
         in al, 0x92
         or al, 2
         out 0x92, al
-        mov ax, 100000
+        mov ax, 10000
         .lp:
             dec ax
             cmp ax, 0
@@ -159,13 +166,57 @@ enable_a20:
         test al, 1
         jnz .wait2
         ret
-
 load_gdt:
+    lgdt [GDT_desc]
+    push ds
+    mov eax, cr0
+    or al, 1
+    mov cr0, eax
+    jmp 0x8:.unreal
+    .unreal:
+        mov bx, 0x18
+        mov ds, bx
+        and al, 0xfe
+        mov cr0, eax
+        jmp 0x0:.real
+    .real:;no actual code here, just label for readability and organization
 load_part2:
+    mov ah, 0x42
+    xor edx, edx
+    mov dx, word [data.part_seg]
+    shl edx, 4
+    xor ecx, ecx
+    mov cx, word [data.part_off]
+    add edx, ecx
+    
+    mov al, byte [edx]
+    and al, 0x80
+    jz .read
+    mov ecx, [edx + 0x8]
+    
+    add [DAP.sector_start], ecx
+    .read:
+        mov dl, byte [data.boot_disc]
+        push 0
+        pop ds
+        mov si, DAP
+        int 0x13
+        jc load_fail
+        jmp part_2
+    
     jmp $
 no_a20:
     mov ah, 0xe
     mov al, 'E'
+    int 0x10
+    mov al, '1'
+    int 0x10
+    jmp $
+load_fail:
+    mov ah, 0xe
+    mov al, 'E'
+    int 0x10
+    mov al, '2'
     int 0x10
     jmp $
 DAP:
@@ -177,8 +228,56 @@ DAP:
     .sector_start:
         dd 1
         dd 0
-
-
+GDT_desc:
+    .size: dw GD_TABLE-GD_END - 1
+    .offset: dd GD_TABLE
+GD_TABLE:
+    .null:
+        dd 0
+        dd 0
+    .kcode16:
+        dw 0xffff
+        dw 0x0000
+        db 0x00
+        db 0b10011010
+        db 0b00001111
+        db 0x00
+    .kcode32:
+        dw 0xffff
+        dw 0x0000
+        db 0x00
+        db 0b10011010
+        db 0b11001111
+        db 0x00
+    .kdata32:
+        dw 0xffff
+        dw 0x0000
+        db 0x00
+        db 0b10010010
+        db 0b11001111
+        db 0x00
+    .ucode32:
+        dw 0xffff
+        dw 0x0000
+        db 0x00
+        db 0b11111010
+        db 0b11001111
+        db 0x00
+    .udata32:
+        dw 0xffff
+        dw 0x0000
+        db 0x00
+        db 0b11110010
+        db 0b11001111
+        db 0x00
+    .tss:
+        dd 0
+        dd 0
+    .phony:
+        dw 0xaa55
+        dd 0
+        dw 0x55aa
+GD_END:
 data:
     .boot_disc: db 0
     .part_seg: dw 0
@@ -196,6 +295,8 @@ fs_info:
     .trail: dd 0xAA550000 
 times 1024-($-$$) db 0
 part_2:
+    debug
+    jmp $
 load_part3:
 get_mmap:
 set_video_mode:
