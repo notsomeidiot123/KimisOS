@@ -181,6 +181,7 @@ load_gdt:
         mov cr0, eax
         jmp 0x0:.real
     .real:;no actual code here, just label for readability and organization
+    pop ds
 load_part2:
     mov ah, 0x42
     xor edx, edx
@@ -201,6 +202,7 @@ load_part2:
         push 0
         pop ds
         mov si, DAP
+        jmp $
         int 0x13
         jc load_fail
         jmp part_2
@@ -298,6 +300,7 @@ times 1024-($-$$) db 0
 part_2:
     call get_mmap
     call paging_en
+    call open_file
     jmp $
 load_kernel:
 get_mmap:
@@ -360,6 +363,46 @@ paging_en:
     ret
 open_file:
     ;only looks in the root directory
+    xor esi, esi
+    xor ecx, ecx
+    xor edx, edx
+    mov esi, [fat_bpb.part_start];
+    add si, [fat_bpb.reserved_sectors]
+    mov cl, [fat_bpb.fat_count]
+    mov dx, [fat_ebpb32.sectors_per_fat]
+    .addlp:
+        add esi, edx
+        dec ecx
+        or ecx, ecx
+        jnz .addlp
+    xor dx, dx
+    mov ecx, [fat_ebpb32.root_dir_cluster]
+    mov dl, [fat_bpb.sectors_per_cluster]
+    .addlp1:
+        add esi, edx
+        dec ecx
+        or ecx, ecx
+        jnz .addlp1
+    mov [DAP.sector_start], esi
+    mov [DAP.read_count],   dx
+    mov [DAP.offset],       word 0xd000
+    mov [DAP.segment],      word 0x0000
+    
+    mov eax, [DAP.sector_start]
+    mov ebx, [DAP.sector_start + 4]
+    mov ecx, [DAP.offset]
+    mov dx, [DAP.read_count]
+    push 0
+    pop ds
+    push 0
+    pop es
+    ;sector start now contains the sector number of the first data sector of the root directory
+    mov ah, 0x42
+    mov dl, byte [data.boot_disc]
+    mov si, DAP
+    int 0x13
+    jc load_fail
+    debug
 read_file:
     ;reads all data from file
 load_elf:
@@ -369,7 +412,7 @@ k_info:
     .memory_map_ptr:    dd 0x2000
     .memory_map_count:  dw 0
     .padding:           db 0
-    .bpp:               db 0
+    .bpp:               db 0;if depth == 0 then video is text mode
     .xres:              dw 0
     .yres:              dw 0
     .framebuffer_ptr:   dd 0
