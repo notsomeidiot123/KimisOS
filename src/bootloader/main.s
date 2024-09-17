@@ -11,6 +11,7 @@ bits 16
     mov ah, 0xe
     mov al, 0x41
     int 0x10
+    jmp $
 %endmacro
 
 ;TODO:
@@ -295,9 +296,88 @@ fs_info:
     .trail: dd 0xAA550000 
 times 1024-($-$$) db 0
 part_2:
-    debug
+    call get_mmap
+    call paging_en
     jmp $
-load_part3:
+load_kernel:
 get_mmap:
+    pushad
+    push ds
+    push es
+    
+    push 0x200
+    pop es
+    mov di, 0
+    
+    mov edx, 0x534D4150
+    xor ebx, ebx
+    xor esi, esi
+    .get_map:
+        mov eax, 0xe820
+        mov ecx, 24
+        int 0x15
+        jc .ret
+        mov eax, [es:di + 8]
+        or eax, [es:di + 16]
+        jz .get_map
+        inc si
+        or dword [es:di + 20], 1
+        add di, 24
+        cmp ebx, 0
+        je .ret
+        jmp .get_map
+    
+    .ret:
+        cmp si, 0
+        je .ret_err
+        mov [k_info.memory_map_count], si
+        pop es
+        pop ds
+        popad
+        mov ax, 0
+        ret
+    .ret_err:
+        pop es
+        pop ds
+        popad
+        mov ax, 1
+        ret
 set_video_mode:
+paging_en:
+    mov eax, cr4
+    or eax, 0x00000010 ;enable 4mb pages
+    mov cr4, eax
+    
+    mov eax, 0x4000;page table base
+    mov [eax], dword 0
+    or [eax], dword 0b0_0001_1000_1001;present, Write-through, page size 4mb, global, present
+    mov cr3, eax
+    
+    ;enable recursive paging
+    mov [eax + 1023], eax
+    or [eax + 1023], dword 0b0_0001_0000_1001
+    
+    ret
+open_file:
+    ;only looks in the root directory
+read_file:
+    ;reads all data from file
+load_elf:
+    ;parse elf and relocate each section to it's appropriate location
+;kernel info
+k_info:
+    .memory_map_ptr:    dd 0x2000
+    .memory_map_count:  dw 0
+    .padding:           db 0
+    .bpp:               db 0
+    .xres:              dw 0
+    .yres:              dw 0
+    .framebuffer_ptr:   dd 0
+    .loaded_modules:    dd 0
+;loaded_modules points to a struct array containing a ptr to the entry point of each pre-loaded module to be executed during startup
+;module_struct:
+    ;.entry_point: dd 0
+    ; cr3_load: dd 0
+    ;.type:  db 0
+
 times 4096-($-$$) db 0
