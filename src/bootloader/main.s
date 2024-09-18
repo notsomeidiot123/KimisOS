@@ -396,7 +396,7 @@ open_file:
     pop ds
     push 0
     pop es
-    ;sector start now contains the sector number of the first data sector of the root directory
+    
     mov ah, 0x42
     mov dl, byte [data.boot_disc]
     mov si, DAP

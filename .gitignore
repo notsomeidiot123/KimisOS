@@ -2,3 +2,4 @@ bin
 mount
 image.bin
 dump.img
+diskwrite
