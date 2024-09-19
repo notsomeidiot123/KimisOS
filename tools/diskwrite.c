@@ -55,6 +55,22 @@ typedef struct{
     uint32_t *file_table;
 }fat_info;
 
+typedef struct{
+    char filename[8];
+    char ext[3];
+    uint8_t attributes;
+    uint8_t ntflags;
+    uint8_t creation_time;
+    uint16_t create_time;
+    uint16_t create_date;
+    uint16_t last_access;
+    uint16_t start_cluster_high;
+    uint16_t last_modification_time;
+    uint16_t last_modification_date;
+    uint16_t start_cluster_low;
+    uint32_t size_bytes;
+}__attribute__((packed)) file_t;
+
 int verbose = 0;
 
 int read_sector(FILE *file, uint32_t sector_start, uint32_t count, buffer_t buf){
@@ -85,6 +101,23 @@ int write_file(char *path, fat_info *info, FILE *file){
         printf("Failed to open file: %s\nAborting...\n", path);
         exit(-1);
     }
+    fseek(ifile, 0, SEEK_END);
+    int ifsize = ftell(ifile);
+    if(ifsize == 0){
+        verbose && printf("File has length of 0, skipping %s\n", path);
+        return 0;
+    }
+    buffer_t ifile_data = malloc(ifsize);
+    rewind(ifile);
+    if(!fread(ifile_data, 1, ifsize, ifile)){
+        verbose && printf("Failed to read from file %s, skippping\n", path);
+        return 0;
+    }
+    
+    //create file in root dir
+    
+    
+    
 }
 
 int read_file(){
