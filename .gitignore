@@ -3,3 +3,5 @@ mount
 image.bin
 dump.img
 diskwrite
+*.bin
+*.elf

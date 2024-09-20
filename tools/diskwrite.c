@@ -6,6 +6,14 @@
 #define FILE_END    0xFFFFFFFF
 #define FILE_FREE   0x00000000
 
+#define FAT_ATTR_READONLY   0x01
+#define FAT_ATTR_HIDDEN     0x02
+#define FAT_ATTR_SYSTEM     0x04
+#define FAT_ATTR_VOLID      0x08
+#define FAT_ATTR_DIR        0x10
+#define FAT_ATTR_ARCHIVE    0x20
+#define FAT_LFN             FAT_ATTR_READONLY | FAT_ATTR_HIDDEN | FAT_ATTR_SYSTEM | FAT_ATTR_VOLID
+
 typedef uint8_t *buffer_t;
 
 typedef struct{
@@ -95,6 +103,23 @@ int write_sector(FILE *file, uint32_t sector_start, uint32_t count, buffer_t buf
     return result;
 }
 
+uint32_t find_free_cluster(fat_info *info){
+    uint32_t start = info->fsinfo.cluster_search_start;
+    if(start < 2){
+        start = 2;
+    }
+    for(int i = start; i < (info->bpb.bytes_per_sector/4) * info->bpb.sectors_per_fat; i++){
+        if(info->file_table[i]) continue;
+        return i;
+    }
+}
+
+void write_cluster_value(fat_info *info, uint32_t value, uint32_t cluster){
+    for(int i = 0; i < info->bpb.fat_count; i++){
+        info->file_table[cluster + i * info->bpb.sectors_per_fat * (info->bpb.bytes_per_sector/4)] = value;
+    }
+}
+
 int write_file(char *path, fat_info *info, FILE *file){
     FILE *ifile = fopen(path, "r");
     if(!ifile){
@@ -107,28 +132,47 @@ int write_file(char *path, fat_info *info, FILE *file){
         verbose && printf("File has length of 0, skipping %s\n", path);
         return 0;
     }
-    buffer_t ifile_data = malloc(ifsize);
+    buffer_t ifile_data = malloc((ifsize/(info->bpb.bytes_per_sector * info->bpb.sectors_per_cluster) + 1) * info->bpb.bytes_per_sector * info->bpb.sectors_per_cluster);
     rewind(ifile);
     if(!fread(ifile_data, 1, ifsize, ifile)){
         verbose && printf("Failed to read from file %s, skippping\n", path);
         return 0;
     }
-    
     //create file in root dir
-    
-    
+    file_t dirent = {0};
+    memcpy(dirent.filename, path, 8);
+    int extoffset = 0;
+    while(*(path + extoffset) != '.' && *(path + extoffset)){
+        extoffset++;
+    }
+    verbose && printf("File extension at %d\n", extoffset);
+    memcpy(dirent.ext, path + extoffset, 3);
+    dirent.size_bytes = ifsize;
+    verbose && printf("Writing %u sectors\n", ifsize/(info->bpb.bytes_per_sector * info->bpb.sectors_per_cluster) + 1);
+    uint32_t last_cluster = 0;
+    for(int i = 0; i < ifsize/(info->bpb.bytes_per_sector * info->bpb.sectors_per_cluster) + 1; i++){
+        uint32_t cluster = find_free_cluster(info);
+        if(i == 0){
+            dirent.start_cluster_high = cluster >> 16;
+            dirent.start_cluster_low = cluster & 0xFFFF;
+        }
+        write_sector(file, (info->bpb.reserved_sectors + info->bpb.fat_count * info->bpb.sectors_per_fat) + cluster * info->bpb.sectors_per_cluster, info->bpb.sectors_per_cluster, ifile_data);
+        verbose && printf("wrote to sector %x %x sectors of data from buffer\n", (info->bpb.reserved_sectors + info->bpb.fat_count * info->bpb.sectors_per_fat) + cluster * info->bpb.sectors_per_cluster, info->bpb.sectors_per_cluster);
+        if(last_cluster != 0) write_cluster_value(info, cluster, last_cluster);
+        last_cluster = cluster;
+    }
+    verbose && printf("last cluster: %d\n", last_cluster);
+    write_cluster_value(info, FILE_END, last_cluster);
     
 }
 
-int read_file(){
-    
-}
-
-void write_cluster_value(fat_info *info, uint32_t value, uint32_t cluster){
-    for(int i = 0; i < info->bpb.fat_count; i++){
-        info->file_table[cluster + i * info->bpb.sectors_per_fat * (info->bpb.bytes_per_sector/4)] = value;
+int read_file(fat_info *info, uint32_t first_cluster, file_t *file, buffer_t buffer){
+    if(file == 0){
+        buffer_t buf;
+        
     }
 }
+
 
 int fat_write_back(FILE *file, fat_info *info){
     int res = 0;
