@@ -202,7 +202,7 @@ load_part2:
         push 0
         pop ds
         mov si, DAP
-        jmp $
+        ; jmp $
         int 0x13
         jc load_fail
         jmp part_2

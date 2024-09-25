@@ -5,3 +5,4 @@ dump.img
 diskwrite
 *.bin
 *.elf
+*.dump
