@@ -94,27 +94,32 @@ int read_sector(FILE *file, uint32_t sector_start, uint32_t count, buffer_t buf)
 }
 
 int write_sector(FILE *file, uint32_t sector_start, uint32_t count, buffer_t buf){
+    // printf("pre seek\n");
     int result = fseek(file, sector_start * 512, SEEK_SET);
     if(result){
         printf("Error during seek\n");
         return result;
     }
+    // printf("pre write\n");
     result = fwrite(buf, 512, count, file);
     return result;
 }
 
 uint32_t find_free_cluster(fat_info *info){
+    // printf("finding free cluster\n");
     uint32_t start = info->fsinfo.cluster_search_start;
     if(start < 2){
         start = 2;
     }
-    for(int i = start; i < (info->bpb.bytes_per_sector/4) * info->bpb.sectors_per_fat; i++){
+    for(int i = start; i < (info->bpb.sectors_per_fat * info->bpb.bytes_per_sector)/4; i++){
+        // printf("%d, %p\n", i);
         if(info->file_table[i]) continue;
         return i;
     }
 }
 
 void write_cluster_value(fat_info *info, uint32_t value, uint32_t cluster){
+    printf("writing cluster :3\n");
     for(int i = 0; i < info->bpb.fat_count; i++){
         info->file_table[cluster + i * info->bpb.sectors_per_fat * (info->bpb.bytes_per_sector/4)] = value;
     }
@@ -159,6 +164,7 @@ int create_file(char *path, fat_info *info, FILE *file){
             dirent.start_cluster_high = cluster >> 16;
             dirent.start_cluster_low = cluster & 0xFFFF;
         }
+        // printf("found free cluster\n");
         write_sector(file, (info->bpb.reserved_sectors + info->bpb.fat_count * info->bpb.sectors_per_fat) + cluster * info->bpb.sectors_per_cluster, info->bpb.sectors_per_cluster, ifile_data);
         verbose && printf("wrote to sector %x %x sectors of data from buffer\n", (info->bpb.reserved_sectors + info->bpb.fat_count * info->bpb.sectors_per_fat) + cluster * info->bpb.sectors_per_cluster, info->bpb.sectors_per_cluster);
         if(last_cluster != 0) write_cluster_value(info, cluster, last_cluster);
@@ -183,9 +189,19 @@ int create_file(char *path, fat_info *info, FILE *file){
     }
     root_dir[free_file_index] = dirent;
     verbose && printf("Found a free dirent at index %u\n", free_file_index);
-    for(uint32_t i = 0; i < (dirent_count * sizeof(file_t)) / info->bpb.bytes_per_sector /info->bpb.sectors_per_cluster; i++){
-        write_sector(file, (info->bpb.reserved_sectors + (info->bpb.fat_count * info->bpb.sectors_per_fat) + info->file_table[i] * info->bpb.sectors_per_cluster), info->bpb.sectors_per_cluster, (buffer_t)(root_dir + i * info->bpb.sectors_per_cluster * info->bpb.bytes_per_sector));
-        
+    uint32_t cluster = info->bpb.root_dir_cluster;
+    uint32_t cluster_count = (dirent_count * sizeof(file_t)) / info->bpb.bytes_per_sector /info->bpb.sectors_per_cluster;
+    for(uint32_t i = 0; i < cluster_count; i++){
+        write_sector(file, (info->bpb.reserved_sectors + (info->bpb.fat_count * info->bpb.sectors_per_fat) + cluster * info->bpb.sectors_per_cluster), info->bpb.sectors_per_cluster, (buffer_t)(root_dir + i * info->bpb.sectors_per_cluster * info->bpb.bytes_per_sector));
+        uint32_t lcluster = cluster;
+        cluster = info->file_table[cluster];
+        if(cluster == FILE_END && i < cluster_count - 1){
+            cluster = find_free_cluster(info);
+            if(cluster != FILE_END){
+                write_cluster_value(info, cluster, lcluster);
+                write_cluster_value(info, cluster, FILE_END);
+            }
+        }
     }
 }
 
@@ -228,8 +244,8 @@ int detect_repair_fs(FILE *file, fat_info *info){
     verbose && printf("allocated 0x%x bytes for fat\n", (info->bpb.sectors_per_fat * info->bpb.fat_count * info->bpb.bytes_per_sector));
     int result = read_sector(file, info->bpb.reserved_sectors, info->bpb.fat_count * info->bpb.sectors_per_fat, fat);
     if(result == 0){
-        printf("Error: Could not read from disk\n");
-        return 0;
+        printf("Error: Could not read from disk %p\n", file);
+        return 1;
     }
     info->file_table = (uint32_t *)fat;
     verbose && printf("FAT assigned\n");
@@ -275,10 +291,10 @@ int main(int argc, char **argv){
         return 0;
     }
     detect_repair_fs(output_file, &info);
-    verbose && printf("Finished. Exiting...\n");
     for(int i = 0; i < filec; i++){
         create_file(files[i], &info, output_file);
     }
     fat_write_back(output_file, &info);
+    verbose && printf("Finished. Exiting...\n");
     return 0;
 }

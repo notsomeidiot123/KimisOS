@@ -402,7 +402,8 @@ open_file:
     mov si, DAP
     int 0x13
     jc load_fail
-    debug
+    jmp $
+    ; debug
 read_file:
     ;reads all data from file
 load_elf:
