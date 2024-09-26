@@ -6,3 +6,4 @@ diskwrite
 *.bin
 *.elf
 *.dump
+*.img

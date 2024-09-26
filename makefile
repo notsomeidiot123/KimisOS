@@ -23,5 +23,6 @@ init:
 
 clean:
 	@rm diskwrite
+	@rm image.bin
 	@rm -rf bin/
 	@rm -rf mount/
