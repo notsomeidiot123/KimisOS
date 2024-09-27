@@ -385,12 +385,9 @@ open_file:
         jnz .addlp1
     mov [DAP.sector_start], esi
     mov [DAP.read_count],   dx
-    mov [DAP.offset],       word 0xd000
+    mov [DAP.offset],       word 0x1000
     mov [DAP.segment],      word 0x0000
     
-    mov eax, [DAP.sector_start]
-    mov ebx, [DAP.sector_start + 4]
-    mov ecx, [DAP.offset]
     mov dx, [DAP.read_count]
     push 0
     pop ds
@@ -405,7 +402,46 @@ open_file:
     jmp $
     ; debug
 read_file:
+read_fat:
+    ;args:
+    ;esi: index
+    ;return reg: eax
+    push esi
+    shr esi, 12
+    cmp esi, [loaded_fat_block]
+    je .read
+    
+    call cache_file_table
+    
+    .read:
+        pop esi
+        and esi, 0xfff
+        mov eax, [esi + file_table]
+cache_file_table:
+    ;args: 
+    ;esi: fat block index (in 4kb)
     ;reads all data from file
+    mov eax, 4096
+    push edx
+    xor edx, edx
+    push ecx
+    xor ecx, ecx
+    mov cx, [fat_bpb.bytes_per_sector]
+    div ecx
+    
+    push eax ;will be important for the DAP
+    
+    mov ecx, eax
+    
+    mov eax, esi
+    xor edx, edx
+    mul ecx;eax = start sector
+    ;sector_to_read = start_sector + fat_bpb.reserved_sectors
+    xor edx, edx
+    mov dx, [fat_bpb.reserved_sectors]
+    add eax, edx;sector_to_read
+    mov [DAP.start_sector], eax
+    
 load_elf:
     ;parse elf and relocate each section to it's appropriate location
 ;kernel info
@@ -423,5 +459,7 @@ k_info:
     ;.entry_point: dd 0
     ; cr3_load: dd 0
     ;.type:  db 0
-
+loaded_fat_block: dd 0
+root_dir EQU 0x1000
+file_table EQU 0xa000
 times 4096-($-$$) db 0
