@@ -300,6 +300,8 @@ times 1024-($-$$) db 0
 part_2:
     call get_mmap
     call paging_en
+    mov esi, 0
+    call cache_file_table
     call open_file
     jmp $
 load_kernel:
@@ -399,6 +401,9 @@ open_file:
     mov si, DAP
     int 0x13
     jc load_fail
+    ; debug
+    mov si, root_dir
+    mov di, 
     jmp $
     ; debug
 read_file:
@@ -417,6 +422,7 @@ read_fat:
         pop esi
         and esi, 0xfff
         mov eax, [esi + file_table]
+        
 cache_file_table:
     ;args: 
     ;esi: fat block index (in 4kb)
@@ -430,6 +436,7 @@ cache_file_table:
     div ecx
     
     push eax ;will be important for the DAP
+    mov [loaded_fat_block], esi
     
     mov ecx, eax
     
@@ -440,8 +447,20 @@ cache_file_table:
     xor edx, edx
     mov dx, [fat_bpb.reserved_sectors]
     add eax, edx;sector_to_read
-    mov [DAP.start_sector], eax
+    mov [DAP.sector_start], eax
+    pop eax
+    mov [DAP.read_count], ax
+    mov word [DAP.offset], file_table
+    mov ah, 0x42
+    mov si, DAP
+    mov dl, [data.boot_disc]
+    int 0x13
+    jc load_fail
     
+    pop ecx
+    pop edx
+    ret
+    jmp $
 load_elf:
     ;parse elf and relocate each section to it's appropriate location
 ;kernel info
@@ -459,6 +478,7 @@ k_info:
     ;.entry_point: dd 0
     ; cr3_load: dd 0
     ;.type:  db 0
+kernel_file: db ""
 loaded_fat_block: dd 0
 root_dir EQU 0x1000
 file_table EQU 0xa000
