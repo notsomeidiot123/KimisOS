@@ -302,7 +302,13 @@ part_2:
     call paging_en
     mov esi, 0
     call cache_file_table
+    mov edi, kernel_file
     call open_file
+    mov esi, eax
+    mov edi, file_buffer
+    call read_file
+    jc load_fail
+    
     jmp $
 load_kernel:
 get_mmap:
@@ -365,6 +371,10 @@ paging_en:
     ret
 open_file:
     ;only looks in the root directory
+    ;edi = file_to_search
+    ;esi = ptr to load file
+    ;eax = return value (first cluster)
+    ; push esi
     xor esi, esi
     xor ecx, ecx
     xor edx, edx
@@ -387,6 +397,7 @@ open_file:
         jnz .addlp1
     mov [DAP.sector_start], esi
     mov [DAP.read_count],   dx
+    ; pop esi
     mov [DAP.offset],       word 0x1000
     mov [DAP.segment],      word 0x0000
     
@@ -402,11 +413,102 @@ open_file:
     int 0x13
     jc load_fail
     ; debug
-    mov si, root_dir
-    mov di, 
+    xor ecx, ecx
+    ; pop edi
+    .chklp:
+        lea esi, [ecx + root_dir]
+        cmp byte [si], 0
+        je .not_found_ret
+        repe cmpsb
+        mov ax, [si]
+        cmp ax, [di]
+        jne .not_found
+        lea esi, [ecx + root_dir]
+        
+        xor eax, eax
+        xor edx, edx
+        mov ax, [esi + 20]
+        shl eax, 16
+        mov ax, [esi + 26]
+        
+        ret
+        
+    .not_found:
+        add ecx, 32
+        jmp .chklp
+    .not_found_ret:
+        mov eax, -1
+        ret
     jmp $
     ; debug
 read_file:
+    ;args: esi = first cluster in chain
+    ;edi = pointer to data
+    push esi
+    xor ecx, ecx
+    xor edx, edx
+    mov eax, esi
+    mov cl, [fat_bpb.sectors_per_cluster]
+    ; jmp $
+    mul ecx; eax  = offset from file table
+    ; jmp $
+    push eax
+    xor eax, eax
+    xor ecx, ecx
+    
+    mov eax, [fat_ebpb32.sectors_per_fat]
+    xor edx, edx
+    mov cl, [fat_bpb.fat_count]
+    mul ecx
+    
+    xor edx, edx
+    mov dx, [fat_bpb.reserved_sectors]
+    pop ecx
+    add eax, ecx
+    add eax, edx
+    
+    mov [DAP.sector_start], eax
+    xor ecx, ecx
+    mov cl, [fat_bpb.sectors_per_cluster]
+    mov [DAP.read_count], cx
+    push edi
+    shr edi, 16
+    mov [DAP.segment], di
+    pop edi
+    mov [DAP.offset], di
+    
+    mov ah, 0x42
+    mov dl, [data.boot_disc]
+    mov si, DAP
+    int 0x13
+    jc .exit_err
+    
+    ; debug
+    pop esi
+    call read_fat
+    cmp eax, 0xffffffff
+    je .exit_success
+    ; debug
+    xor eax, eax
+    mov al, [fat_bpb.sectors_per_cluster]
+    xor edx, edx
+    xor ecx, ecx
+    mov cx, [fat_bpb.bytes_per_sector]
+    mul ecx
+    
+    add edi, eax
+    jmp read_file
+    
+    .exit_err:
+        mov eax, 1
+        stc
+        ret
+    .exit_success:
+        mov eax, 0
+        clc
+        ret
+    jmp $
+    
 read_fat:
     ;args:
     ;esi: index
@@ -414,15 +516,21 @@ read_fat:
     push esi
     shr esi, 12
     cmp esi, [loaded_fat_block]
+    mov eax, [loaded_fat_block]
+    ; jmp $
     je .read
     
     call cache_file_table
-    
+    ; mov eax, [loaded_fat_block]
+    ; mov esi, [file_table + 0x4 * 3]
+    ; jmp $
     .read:
         pop esi
         and esi, 0xfff
-        mov eax, [esi + file_table]
-        
+        ; jmp $
+        mov eax, [esi * 0x4 + file_table]
+        ; jmp $
+        ret
 cache_file_table:
     ;args: 
     ;esi: fat block index (in 4kb)
@@ -478,8 +586,9 @@ k_info:
     ;.entry_point: dd 0
     ; cr3_load: dd 0
     ;.type:  db 0
-kernel_file: db ""
+kernel_file: db "kernel", 0x0, 0x0, "elf"
 loaded_fat_block: dd 0
+file_buffer EQU 0xa000
 root_dir EQU 0x1000
-file_table EQU 0xa000
+file_table EQU 0xf000
 times 4096-($-$$) db 0
