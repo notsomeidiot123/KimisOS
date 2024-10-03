@@ -202,7 +202,7 @@ load_part2:
         push 0
         pop ds
         mov si, DAP
-        
+        ; jmp $
         int 0x13
         jc load_fail
         jmp part_2
@@ -305,7 +305,7 @@ part_2:
     mov edi, kernel_file
     call open_file
     mov esi, eax
-    mov edi, 0x10000
+    mov edi, file_buffer
     call read_file
     jc load_fail
     
@@ -449,8 +449,9 @@ read_file:
     xor edx, edx
     mov eax, esi
     mov cl, [fat_bpb.sectors_per_cluster]
+    ; jmp $
     mul ecx; eax  = offset from file table
-
+    ; jmp $
     push eax
     xor eax, eax
     xor ecx, ecx
@@ -470,13 +471,11 @@ read_file:
     xor ecx, ecx
     mov cl, [fat_bpb.sectors_per_cluster]
     mov [DAP.read_count], cx
-    ; push edi
-    ; shr edi, 16
-    ; mov [DAP.segment], di
-    ; pop edi
-    ; mov [DAP.offset], di
-    mov word [DAP.segment], 0
-    mov word [DAP.offset], file_buffer
+    push edi
+    shr edi, 16
+    mov [DAP.segment], di
+    pop edi
+    mov [DAP.offset], di
     
     mov ah, 0x42
     mov dl, [data.boot_disc]
@@ -484,7 +483,11 @@ read_file:
     int 0x13
     jc .exit_err
     
-    
+    ; debug
+    pop esi
+    call read_fat
+    cmp eax, 0xffffffff
+    je .exit_success
     ; debug
     xor eax, eax
     mov al, [fat_bpb.sectors_per_cluster]
@@ -492,17 +495,6 @@ read_file:
     xor ecx, ecx
     mov cx, [fat_bpb.bytes_per_sector]
     mul ecx
-    
-    mov esi, file_buffer
-    mov ebx, eax
-    call mmove
-    
-    pop esi
-    call read_fat
-    
-    cmp eax, 0xffffffff
-    je .exit_success
-    
     
     add edi, eax
     jmp read_file
@@ -525,19 +517,19 @@ read_fat:
     shr esi, 12
     cmp esi, [loaded_fat_block]
     mov eax, [loaded_fat_block]
-    
+    ; jmp $
     je .read
     
     call cache_file_table
     ; mov eax, [loaded_fat_block]
     ; mov esi, [file_table + 0x4 * 3]
-    
+    ; jmp $
     .read:
         pop esi
         and esi, 0xfff
-        
+        ; jmp $
         mov eax, [esi * 0x4 + file_table]
-        
+        ; jmp $
         ret
 cache_file_table:
     ;args: 
@@ -577,30 +569,6 @@ cache_file_table:
     pop edx
     ret
     jmp $
-
-mmove:
-    ;esi = src
-    ;edi = dest
-    ;ebx = count
-    push eax
-    push ecx
-    
-    ; debug
-    xor ecx, ecx
-    .mlp:
-        cmp ecx, ebx
-        jge .ret
-        mov al, [ds:esi + ecx]
-        mov [ds:edi + ecx], al
-        inc ecx
-        jmp .mlp
-    .ret:
-    ; debug
-        pop ecx
-        pop eax
-        
-        ret
-
 load_elf:
     ;parse elf and relocate each section to it's appropriate location
 ;kernel info
@@ -620,7 +588,6 @@ k_info:
     ;.type:  db 0
 kernel_file: db "kernel", 0x0, 0x0, "elf"
 loaded_fat_block: dd 0
-kload_paddr: dd 0x10000
 file_buffer EQU 0xa000
 root_dir EQU 0x1000
 file_table EQU 0xf000
