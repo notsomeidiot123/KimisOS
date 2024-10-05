@@ -1,6 +1,6 @@
 ENTRY(_start)
-/* OUTPUT_FORMAT(elf32-i386) */
-OUTPUT_FORMAT(binary)
+OUTPUT_FORMAT(elf32-i386)
+/* OUTPUT_FORMAT(binary) */
 OUTPUT(kernel.elf)
 SEARCH_DIR(bin/kernel)
 SECTIONS{

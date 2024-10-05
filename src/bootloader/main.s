@@ -305,9 +305,12 @@ part_2:
     mov edi, kernel_file
     call open_file
     mov esi, eax
-    mov edi, 0x10000
+    mov edi, kload_paddr
     call read_file
     jc load_fail
+    
+    mov esi, kload_paddr
+    call load_elf
     
     jmp $
 load_kernel:
@@ -603,6 +606,7 @@ mmove:
 
 load_elf:
     ;parse elf and relocate each section to it's appropriate location
+    ;esi: address of loaded kernel;
 ;kernel info
 k_info:
     .memory_map_ptr:    dd 0x2000
