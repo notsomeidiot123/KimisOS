@@ -308,7 +308,7 @@ part_2:
     mov edi, kload_paddr
     call read_file
     jc load_fail
-    
+    ; debug
     mov esi, kload_paddr
     call load_elf
     
@@ -478,6 +478,7 @@ read_file:
     ; mov [DAP.segment], di
     ; pop edi
     ; mov [DAP.offset], di
+    ; jmp $
     mov word [DAP.segment], 0
     mov word [DAP.offset], file_buffer
     
@@ -495,19 +496,22 @@ read_file:
     xor ecx, ecx
     mov cx, [fat_bpb.bytes_per_sector]
     mul ecx
+    ; push eax
     
     mov esi, file_buffer
     mov ebx, eax
     call mmove
-    
+    ; debug 
     pop esi
     call read_fat
-    
+    ; jmp $
+    ; debug
     cmp eax, 0xffffffff
     je .exit_success
     
-    
-    add edi, eax
+    ; jmp $
+    mov esi, eax
+    add edi, ebx
     jmp read_file
     
     .exit_err:
@@ -517,6 +521,7 @@ read_file:
     .exit_success:
         mov eax, 0
         clc
+        ; debug
         ret
     jmp $
     
@@ -585,12 +590,14 @@ mmove:
     ;esi = src
     ;edi = dest
     ;ebx = count
+    ; jmp $
     push eax
     push ecx
     
     ; debug
     xor ecx, ecx
     .mlp:
+    ; jmp $
         cmp ecx, ebx
         jge .ret
         mov al, [ds:esi + ecx]
@@ -601,12 +608,13 @@ mmove:
     ; debug
         pop ecx
         pop eax
-        
+        ; jmp $
         ret
 
 load_elf:
     ;parse elf and relocate each section to it's appropriate location
     ;esi: address of loaded kernel;
+    debug
 ;kernel info
 k_info:
     .memory_map_ptr:    dd 0x2000
