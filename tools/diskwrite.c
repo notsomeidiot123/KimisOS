@@ -145,6 +145,7 @@ int create_file(char *path, fat_info *info, FILE *file){
         verbose && printf("Failed to read from file %s, skippping\n", path);
         return 0;
     }
+    verbose && printf("Read %d bytes from ifile\n", ifsize);
     //create file in root dir
     file_t dirent = {0};
     int extoffset = 0;
@@ -158,14 +159,16 @@ int create_file(char *path, fat_info *info, FILE *file){
     dirent.size_bytes = ifsize;
     verbose && printf("Writing %u sectors\n", ifsize/(info->bpb.bytes_per_sector * info->bpb.sectors_per_cluster) + 1);
     uint32_t last_cluster = 0;
-    for(int i = 0; i < ifsize/(info->bpb.bytes_per_sector * info->bpb.sectors_per_cluster) + 1; i++){
+    for(int i = 0; i <= ifsize/(info->bpb.bytes_per_sector * info->bpb.sectors_per_cluster); i++){
         uint32_t cluster = find_free_cluster(info);
         if(i == 0){
             dirent.start_cluster_high = cluster >> 16;
             dirent.start_cluster_low = cluster & 0xFFFF;
         }
         // printf("found free cluster\n");
-        write_sector(file, (info->bpb.reserved_sectors + info->bpb.fat_count * info->bpb.sectors_per_fat) + cluster * info->bpb.sectors_per_cluster, info->bpb.sectors_per_cluster, ifile_data);
+        write_sector(file, (info->bpb.reserved_sectors + info->bpb.fat_count * info->bpb.sectors_per_fat) + cluster * info->bpb.sectors_per_cluster, info->bpb.sectors_per_cluster, ifile_data + (info->bpb.bytes_per_sector * info->bpb.sectors_per_cluster) * i);
+        printf("cluster %d @ %p\n", i, ifile_data + (info->bpb.bytes_per_sector * info->bpb.sectors_per_fat * info->bpb.sectors_per_cluster) * i);
+        
         verbose && printf("wrote to sector %x %x sectors of data from buffer\n", (info->bpb.reserved_sectors + info->bpb.fat_count * info->bpb.sectors_per_fat) + cluster * info->bpb.sectors_per_cluster, info->bpb.sectors_per_cluster);
         if(last_cluster != 0) write_cluster_value(info, cluster, last_cluster);
         last_cluster = cluster;
