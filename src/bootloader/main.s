@@ -362,7 +362,7 @@ paging_en:
     or eax, 0x00000010 ;enable 4mb pages
     mov cr4, eax
     
-    mov eax, 0x4000;page table base
+    mov eax, page_table;page table base
     mov [eax], dword 0
     or [eax], dword 0b0_0001_1000_1001;present, Write-through, page size 4mb, global, present
     mov cr3, eax
@@ -614,7 +614,49 @@ mmove:
 load_elf:
     ;parse elf and relocate each section to it's appropriate location
     ;esi: address of loaded kernel;
-    debug
+    ;buffer = $esi
+    ; debug
+    push ebp
+    mov ebp, esp;set up stack frame for function (i'll need a few local variables)
+    
+    mov [ebp - 4], esi;char *file_buffer = buffer
+    
+    
+    
+    .ret_err:
+        mov eax, 1
+    .ret:
+        pop ebp
+        ret
+
+map_addr:
+    ;map address in esi to physical address in edi
+    
+    mov eax, esi
+    
+    mov ebx, page_table
+    shr eax, 22
+    add ebx, esi
+    and ebx, ebx
+    jnz .map
+    .allocate_table:
+        mov edx, [last_allocated_pgtb]
+        add edx, 0x1000
+        mov [last_allocated_pgtb], edx
+        mov [ebx], edx
+        or dword [ebx], 0b0_0001_0000_0001
+        mov edx, [ebx];
+    .map:
+        mov ebx, edx
+        mov eax, esi
+        shr eax, 12
+        and eax, 0x3ff
+        add ebx, eax
+        mov [ebx], edi
+        or dword [ebx], 0b0001_0000_0001
+        ret
+    jmp $
+
 ;kernel info
 k_info:
     .memory_map_ptr:    dd 0x2000
@@ -632,8 +674,13 @@ k_info:
     ;.type:  db 0
 kernel_file: db "kernel", 0x0, 0x0, "elf"
 loaded_fat_block: dd 0
-kload_paddr: dd 0x10000
+last_allocated_pgtb: dd 0x4000
+sacrifice1: dd 0
+sacrifice0: dd 1
+kload_paddr EQU 0x10000
+
 file_buffer EQU 0xa000
 root_dir EQU 0x1000
 file_table EQU 0xf000
+page_table EQU 0x4000
 times 4096-($-$$) db 0

@@ -1,10 +1,10 @@
-bits 16
+bits 32
 
 global _start
 
 _start:
     mov ebx, 0xb8000
-    mov word [ds:ebx], 0x0f41
+    mov word [ebx], 0x0f41
     cli
     hlt
     jmp $
