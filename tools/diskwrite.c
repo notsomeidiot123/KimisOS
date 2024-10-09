@@ -157,7 +157,7 @@ int create_file(char *path, fat_info *info, FILE *file){
     verbose && printf("file ext: %s\n", path + extoffset);
     memmove(dirent.ext, path + extoffset + 1, 3);
     dirent.size_bytes = ifsize;
-    verbose && printf("Writing %u sectors\n", ifsize/(info->bpb.bytes_per_sector * info->bpb.sectors_per_cluster) + 1);
+    verbose && printf("Writing %u clusters\n", ifsize/(info->bpb.bytes_per_sector * info->bpb.sectors_per_cluster) + 1);
     uint32_t last_cluster = 0;
     for(int i = 0; i <= ifsize/(info->bpb.bytes_per_sector * info->bpb.sectors_per_cluster); i++){
         uint32_t cluster = find_free_cluster(info);
@@ -171,10 +171,11 @@ int create_file(char *path, fat_info *info, FILE *file){
         
         verbose && printf("wrote to sector %x %x sectors of data from buffer\n", (info->bpb.reserved_sectors + info->bpb.fat_count * info->bpb.sectors_per_fat) + cluster * info->bpb.sectors_per_cluster, info->bpb.sectors_per_cluster);
         if(last_cluster != 0) write_cluster_value(info, cluster, last_cluster);
+        write_cluster_value(info, FILE_END, cluster);
         last_cluster = cluster;
     }
     verbose && printf("last cluster: %d\n", last_cluster);
-    write_cluster_value(info, FILE_END, last_cluster);
+    // write_cluster_value(info, FILE_END, last_cluster);
     
     buffer_t root_dir_buffer = 0;
     uint32_t dirent_count = read_file(info, info->bpb.root_dir_cluster, 0, &root_dir_buffer, file)/sizeof(file_t);

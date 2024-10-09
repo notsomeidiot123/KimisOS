@@ -312,7 +312,30 @@ part_2:
     mov esi, kload_paddr
     call load_elf
     
+    push eax
+    cli
+    mov eax, page_table
+    mov cr3, eax
+    mov eax, cr4
+    or eax, 1 << 4
+    mov cr4, eax
+    mov eax, cr0
+    or eax, 0x8000_0001
+    mov cr0, eax
+    jmp 0x10:protected_mode
+    
+protected_mode:
+        bits 32
+        mov bx, 0x18
+        mov ds, bx
+        mov es, bx
+        mov ss, bx
+        mov gs, bx
+        mov fs, bx
+        pop eax
+        jmp eax
     jmp $
+bits 16
 load_kernel:
 get_mmap:
     pushad
@@ -615,45 +638,105 @@ load_elf:
     ;parse elf and relocate each section to it's appropriate location
     ;esi: address of loaded kernel;
     ;buffer = $esi
-    ; debug
-    push ebp
-    mov ebp, esp;set up stack frame for function (i'll need a few local variables)
     
-    mov [ebp - 4], esi;char *file_buffer = buffer
-    
-    
-    
-    .ret_err:
-        mov eax, 1
-    .ret:
-        pop ebp
+    mov eax, esi
+    xor ecx, ecx
+    mov cx, [eax + 44];program header count
+    add eax, [eax + 28];eax = elf.prgm_hdr
+    push esi
+    xor ebx, ebx
+    mov ebx, eax
+    ; mov edi, esi
+    .loop_head:
+        dec cx
+        mov edx, [ebx]
+        
+        cmp edx, 2
+        je .err
+        cmp edx, 3
+        je .err
+        cmp edx, 0
+        je .loop_next
+        
+        ; mov edi, esi
+        mov edx, esi
+        pop esi
+        mov edi, esi
+        push esi
+        add edi, [ebx + 4]
+        mov esi, [ebx + 8]
+        
+        push ecx
+        mov ecx, [ebx + 20]
+        shr ecx, 12
+        .map_loop:
+            
+            call map_addr
+            
+            add edi, 0x1000
+            add esi, 0x1000
+            dec ecx
+            cmp ecx, 0
+            jne .map_loop
+        .loop_next:
+        pop ecx
+        add ebx, 32
+        cmp cx, 0
+        jne .loop_head
+    .loop_end:
+        pop esi
+        mov eax, [esi + 24]
         ret
+        jmp $
+    .err:
+        mov ah, 0xe
+        mov al, 'E'
+        int 0x10
+        mov al, '3'
+        int 0x10
+        jmp $
 
 map_addr:
     ;map address in esi to physical address in edi
+    push ebx
+    push eax
     
     mov eax, esi
-    
+    xor ebx, ebx
     mov ebx, page_table
     shr eax, 22
-    add ebx, esi
-    and ebx, ebx
+    shl eax, 2
+    add ebx, eax
+    ; and [ebx], [ebx]
+    mov eax, [ebx]
+    and eax, 0xffff_f000
+    cmp [ebx], eax
     jnz .map
     .allocate_table:
+        
         mov edx, [last_allocated_pgtb]
         add edx, 0x1000
         mov [last_allocated_pgtb], edx
+        ; or edx, 3
         mov [ebx], edx
-        or dword [ebx], 0b0_0001_0000_0001
-        mov edx, [ebx];
+        ; jmp $
+        or dword [ebx], 0b0_0000_0000_0011
+        mov eax, edx
     .map:
-        mov ebx, edx
+    ; debug
+        mov ebx, eax
         mov eax, esi
         shr eax, 12
         and eax, 0x3ff
-        add ebx, eax
+        lea ebx, [ebx + eax*4]
+        ; jmp $
         mov [ebx], edi
-        or dword [ebx], 0b0001_0000_0001
+        ; debug
+        or dword [ebx], 0b0000_0000_0011
+        ; mov ecx, [ebx]
+        ; jmp $
+        pop eax
+        pop ebx
         ret
     jmp $
 
@@ -682,5 +765,5 @@ kload_paddr EQU 0x10000
 file_buffer EQU 0xa000
 root_dir EQU 0x1000
 file_table EQU 0xf000
-page_table EQU 0x4000
+page_table EQU 0x00004000
 times 4096-($-$$) db 0

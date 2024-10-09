@@ -6,4 +6,5 @@ diskwrite
 *.bin
 *.elf
 *.dump
+intlog.*
 *.img
