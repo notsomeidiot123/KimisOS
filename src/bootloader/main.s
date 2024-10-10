@@ -333,6 +333,7 @@ protected_mode:
         mov gs, bx
         mov fs, bx
         pop eax
+        mov esi, k_info
         jmp eax
     jmp $
 bits 16
