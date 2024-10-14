@@ -29,7 +29,7 @@ init:
 	@mkdir bin/boot
 	@mkdir bin/kernel
 
-.PHONY: tools makefile
+.PHONY: tools
 
 clean:
 	@rm diskwrite
