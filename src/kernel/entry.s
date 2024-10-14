@@ -1,10 +1,12 @@
 bits 32
 
-global _start
-extern kmain
+; extern kmain
 section .text
+; global _start
 _start:
-    call kmain
+    mov ebx, 0xb8002
+    mov word [ebx], 0xf41
+    ; call kmain
     jmp $
     
 section .data

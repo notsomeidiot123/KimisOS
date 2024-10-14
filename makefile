@@ -1,6 +1,6 @@
 CC := gcc
 AS := nasm
-CFLAGS := -c -mno-sse -mno-sse2 -mno-red-zone -ffreestanding -fno-pie -fno-stack-protector -mno-mmx
+CFLAGS = -c -mno-sse -mno-sse2 -mno-red-zone -ffreestanding -m32 -nostdlib -fno-pie -fno-stack-protector -mno-mmx
 BL_ASFLAGS := -f bin
 SRCS := $(wildcard src/kernel/*.c)
 OBJS := $(patsubst src/kernel/%.c, bin/kernel/%.o, $(SRCS))
@@ -18,8 +18,8 @@ bootloader:
 
 kernel: $(OBJS)
 	nasm src/kernel/entry.s -o bin/kernel/entry.o -f elf32
-	ld -T linker.ld bin/kernel/entry.o -melf_i386
-
+	# ld -T linker.ld bin/kernel/entry.o bin/kernel/*.o -melf_i386
+	ld -T linker.ld bin/kernel/*.o -melf_i386
 %.o: $(SRCS)
 	$(CC) $(CFLAGS) $< -o $@
 
@@ -29,7 +29,7 @@ init:
 	@mkdir bin/boot
 	@mkdir bin/kernel
 
-.PHONY: tools makefile
+.PHONY: tools makefile src/
 
 clean:
 	@rm diskwrite

@@ -303,15 +303,19 @@ part_2:
     call set_video_mode
     mov esi, 0
     call cache_file_table
+    ; debug
     mov edi, kernel_file
     call open_file
+    ; debug
     mov esi, eax
     mov edi, kload_paddr
     call read_file
+    ; debug
     jc load_fail
     ; debug
     mov esi, kload_paddr
     call load_elf
+    ; debug
     push eax
     cli
     mov eax, page_table
@@ -642,55 +646,7 @@ mmove:
 load_elf:
     ;parse elf and relocate each section to it's appropriate location
     ;esi: address of loaded kernel;
-    ;buffer = $esi
-    
-    mov eax, esi
-    xor ecx, ecx
-    mov cx, [eax + 44];program header count
-    add eax, [eax + 28];eax = elf.prgm_hdr
-    push esi
-    xor ebx, ebx
-    mov ebx, eax
-    ; mov edi, esi
-    .loop_head:
-        dec cx
-        mov edx, [ebx]
         
-        cmp edx, 2
-        je .err
-        cmp edx, 3
-        je .err
-        cmp edx, 0
-        je .loop_next
-        
-        ; mov edi, esi
-        mov edx, esi
-        pop esi
-        mov edi, esi
-        push esi
-        add edi, [ebx + 4]
-        mov esi, [ebx + 8]
-        
-        push ecx
-        mov ecx, [ebx + 20]
-        shr ecx, 12
-        .map_loop:
-            
-            call map_addr
-            
-            add edi, 0x1000
-            add esi, 0x1000
-            dec ecx
-            cmp ecx, 0
-            jne .map_loop
-        .loop_next:
-        pop ecx
-        add ebx, 32
-        cmp cx, 0
-        jne .loop_head
-    .loop_end:
-        pop esi
-        mov eax, [esi + 24]
         ret
         jmp $
     .err:
@@ -702,47 +658,9 @@ load_elf:
         jmp $
 
 map_addr:
+    ;!TODO: FIXME!
     ;map address in esi to physical address in edi
-    push ebx
-    push eax
-    
-    mov eax, esi
-    xor ebx, ebx
-    mov ebx, page_table
-    shr eax, 22
-    shl eax, 2
-    add ebx, eax
-    ; and [ebx], [ebx]
-    mov eax, [ebx]
-    and eax, 0xffff_f000
-    cmp [ebx], eax
-    jnz .map
-    .allocate_table:
-        
-        mov edx, [last_allocated_pgtb]
-        add edx, 0x1000
-        mov [last_allocated_pgtb], edx
-        ; or edx, 3
-        mov [ebx], edx
-        ; jmp $
-        or dword [ebx], 0b0_0000_0000_0011
-        mov eax, edx
-    .map:
-    ; debug
-        mov ebx, eax
-        mov eax, esi
-        shr eax, 12
-        and eax, 0x3ff
-        lea ebx, [ebx + eax*4]
-        ; jmp $
-        mov [ebx], edi
-        ; debug
-        or dword [ebx], 0b0000_0000_0011
-        ; mov ecx, [ebx]
-        ; jmp $
-        pop eax
-        pop ebx
-        ret
+    ret
     jmp $
 
 ;kernel info
@@ -762,7 +680,7 @@ k_info:
     ;.type:  db 0
 kernel_file: db "kernel", 0x0, 0x0, "elf"
 loaded_fat_block: dd 0
-last_allocated_pgtb: dd 0x4000
+last_allocated_pgtb: dd 0x3000
 sacrifice1: dd 0
 sacrifice0: dd 1
 kload_paddr EQU 0x10000
@@ -770,5 +688,5 @@ kload_paddr EQU 0x10000
 file_buffer EQU 0xa000
 root_dir EQU 0x1000
 file_table EQU 0xf000
-page_table EQU 0x00004000
+page_table EQU 0x00003000
 times 4096-($-$$) db 0
