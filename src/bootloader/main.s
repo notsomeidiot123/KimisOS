@@ -300,6 +300,7 @@ times 1024-($-$$) db 0
 part_2:
     call get_mmap
     call paging_en
+    call set_video_mode
     mov esi, 0
     call cache_file_table
     mov edi, kernel_file
@@ -311,7 +312,6 @@ part_2:
     ; debug
     mov esi, kload_paddr
     call load_elf
-    
     push eax
     cli
     mov eax, page_table
@@ -381,6 +381,10 @@ get_mmap:
         mov ax, 1
         ret
 set_video_mode:
+    mov ah, 0x0
+    mov al, 0x3
+    int 0x10
+    ret
 paging_en:
     mov eax, cr4
     or eax, 0x00000010 ;enable 4mb pages
@@ -747,9 +751,9 @@ k_info:
     .memory_map_count:  dw 0
     .padding:           db 0
     .bpp:               db 0;if depth == 0 then video is text mode
-    .xres:              dw 0
-    .yres:              dw 0
-    .framebuffer_ptr:   dd 0
+    .xres:              dw 80
+    .yres:              dw 25
+    .framebuffer_ptr:   dd 0xb8000
     .loaded_modules:    dd 0
 ;loaded_modules points to a struct array containing a ptr to the entry point of each pre-loaded module to be executed during startup
 ;module_struct:

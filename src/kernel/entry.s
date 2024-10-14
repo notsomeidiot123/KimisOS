@@ -1,33 +1,10 @@
 bits 32
 
 global _start
-
+extern kmain
 section .text
 _start:
-    mov ebx, 0xb8000
-    mov esi, string
-    mov ecx, 0
-    mov ah, 0x8f
-    ; mov ax, 0x55aaaa55
-    .lp:
-        lodsb
-        cmp al, 0
-        je .end
-        cmp al, 0xa
-        je .nl
-        cmp al, 0xd
-        je .cr
-        mov [ebx + ecx], ax
-        add ecx, 2
-        jmp .lp
-    .nl:
-        add ebx, 160
-        ; mov word [ebx + ecx], 0xf41
-        jmp .lp
-    .cr:
-        xor ecx, ecx
-        jmp .lp
-    .end:
+    call kmain
     jmp $
     
 section .data
