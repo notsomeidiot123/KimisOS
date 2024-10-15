@@ -70,3 +70,6 @@ While any GDT loaded for the Kernel will work, once the Kernel wants to load use
 |Error Code|Description|
 |----------|-----------|
 |1         |A20 Line could not be enabled|
+|2|Failed to read from disk|
+|3|Corrupted/Invalid ELF formatted file|
+|4|Failed to find suitable location in memory for kernel|
