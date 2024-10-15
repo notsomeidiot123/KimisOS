@@ -2,7 +2,7 @@ ENTRY(_start)
 OUTPUT_FORMAT(elf32-i386)
 /* OUTPUT_FORMAT(binary) */
 OUTPUT(kernel.elf)
-SEARCH_DIR(bin/kernel)
+/* SEARCH_DIR(bin/kernel) */
 SECTIONS{
     . = 0xc0000000;
     .text : AT(ADDR(.text) - 0xc0000000){

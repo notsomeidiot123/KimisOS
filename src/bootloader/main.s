@@ -306,16 +306,19 @@ part_2:
     ; debug
     mov edi, kernel_file
     call open_file
+    call find_kpaddr
     ; debug
     mov esi, eax
-    mov edi, kload_paddr
+    mov edi, [kload_paddr]
+    ; debug
     call read_file
     ; debug
     jc load_fail
     ; debug
-    mov esi, kload_paddr
+    mov esi, [kload_paddr]
     call load_elf
     ; debug
+    debug
     push eax
     cli
     mov eax, page_table
@@ -372,6 +375,7 @@ get_mmap:
     .ret:
         cmp si, 0
         je .ret_err
+        mov [es:di], dword 0
         mov [k_info.memory_map_count], si
         pop es
         pop ds
@@ -409,7 +413,9 @@ open_file:
     ;edi = file_to_search
     ;esi = ptr to load file
     ;eax = return value (first cluster)
+    ;edx = return value (file size)
     ; push esi
+    ;!TODO: return file size in edx
     xor esi, esi
     xor ecx, ecx
     xor edx, edx
@@ -465,7 +471,8 @@ open_file:
         mov ax, [esi + 20]
         shl eax, 16
         mov ax, [esi + 26]
-        
+        mov edx,[esi + 28]
+        ; debug
         ret
         
     .not_found:
@@ -500,7 +507,6 @@ read_file:
     pop ecx
     add eax, ecx
     add eax, edx
-    
     mov [DAP.sector_start], eax
     xor ecx, ecx
     mov cl, [fat_bpb.sectors_per_cluster]
@@ -642,7 +648,38 @@ mmove:
         pop eax
         ; jmp $
         ret
-
+find_kpaddr:
+    ;edx = size of file in bytes
+    push edx
+    push esi
+    push eax
+    mov esi, [k_info.memory_map_ptr]
+    mov ecx, 24
+    .sloop:
+        mov eax, [esi + ecx + 8]
+        cmp eax, edx
+        jge .found
+    .sloop_next:
+        add ecx, 24
+        cmp [esi + ecx], dword 0
+        je .err
+        jmp .sloop
+    .found:
+        cmp [esi + ecx + 16], dword 1
+        jne .sloop_next
+        mov eax, [esi + ecx]
+        mov [kload_paddr], eax
+    pop eax
+    pop esi
+    pop edx
+    mov [kernel_physical_size], edx
+    ret
+    .err:
+        mov ax, 0xe45
+        int 0x10
+        mov al, '4'
+        int 0x10
+        jmp $
 load_elf:
     ;parse elf and relocate each section to it's appropriate location
     ;esi: address of loaded kernel;
@@ -673,6 +710,7 @@ k_info:
     .yres:              dw 25
     .framebuffer_ptr:   dd 0xb8000
     .loaded_modules:    dd 0
+    ;NOTE: remember to search for a free pg directory for the paddr map
 ;loaded_modules points to a struct array containing a ptr to the entry point of each pre-loaded module to be executed during startup
 ;module_struct:
     ;.entry_point: dd 0
@@ -683,10 +721,11 @@ loaded_fat_block: dd 0
 last_allocated_pgtb: dd 0x3000
 sacrifice1: dd 0
 sacrifice0: dd 1
-kload_paddr EQU 0x10000
+kernel_physical_size: dd 0
+kload_paddr: dd 0x10000
 
 file_buffer EQU 0xa000
 root_dir EQU 0x1000
 file_table EQU 0xf000
-page_table EQU 0x00003000
+page_table EQU 0x00010000
 times 4096-($-$$) db 0
