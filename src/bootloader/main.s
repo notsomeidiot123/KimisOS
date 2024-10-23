@@ -318,7 +318,6 @@ part_2:
     mov esi, [kload_paddr]
     call load_elf
     ; debug
-    debug
     push eax
     cli
     mov eax, page_table
@@ -341,6 +340,7 @@ protected_mode:
         mov fs, bx
         pop eax
         mov esi, k_info
+        jmp $
         jmp eax
     jmp $
 bits 16
@@ -680,12 +680,22 @@ find_kpaddr:
         mov al, '4'
         int 0x10
         jmp $
+        
 load_elf:
     ;parse elf and relocate each section to it's appropriate location
     ;esi: address of loaded kernel;
+    push ebp
+    mov ebp, esp
+    sub esp, 64; What could i possibly need 16 stack-allocated variables for???
+    mov [ebp - 8], esi;file_buffer
+    cmp dword [esi], elf_magic
+    jne .err
+    
+    .map_seg_l:
         
-        ret
-        jmp $
+    pop ebp
+    ret
+    jmp $
     .err:
         mov ah, 0xe
         mov al, 'E'
@@ -695,8 +705,34 @@ load_elf:
         jmp $
 
 map_addr:
-    ;!TODO: FIXME!
     ;map address in esi to physical address in edi
+    push ebp
+    mov ebp, esp
+    mov [ebp - 8], edi
+    mov [ebp - 12], esi
+    
+    shr esi, 22
+    lea esi, [page_table + esi * 4]
+    mov eax, [esi]
+    and eax, 0xfffff000
+    cmp dword [esi], 0
+    jne .map
+    
+    ;create new page dir entry
+    mov eax, [last_allocated_pgtb]
+    add eax, 4096
+    mov [last_allocated_pgtb], eax
+    mov [esi], eax
+    or byte [esi], 1
+    .map:
+        mov esi, eax
+        mov eax, [ebp - 12]
+        shr eax, 12
+        and eax, 0x3ff
+        lea esi, [esi + eax * 4]
+        mov [esi], edi
+        or byte [esi], 1
+    pop ebp
     ret
     jmp $
 
@@ -718,12 +754,15 @@ k_info:
     ;.type:  db 0
 kernel_file: db "kernel", 0x0, 0x0, "elf"
 loaded_fat_block: dd 0
-last_allocated_pgtb: dd 0x3000
+last_allocated_pgtb: dd 0x10000
 sacrifice1: dd 0
 sacrifice0: dd 1
 kernel_physical_size: dd 0
-kload_paddr: dd 0x10000
+kload_paddr: dd 0x20000
 
+
+; elf_magic EQU 0x7f454c46
+elf_magic EQU 0x464c457f
 file_buffer EQU 0xa000
 root_dir EQU 0x1000
 file_table EQU 0xf000

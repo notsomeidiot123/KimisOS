@@ -1,6 +1,6 @@
 CC := gcc
 AS := nasm
-CFLAGS = -c -mno-sse -mno-sse2 -mno-red-zone -ffreestanding -m32 -nostdlib -fno-pie -fno-stack-protector -mno-mmx
+CFLAGS = -c -mno-sse -mno-sse2 -mno-red-zone -ffreestanding -m32 -nostdlib -O3 -fno-pie -fno-stack-protector -mno-mmx
 BL_ASFLAGS := -f bin
 SRCS := $(wildcard src/kernel/*.c)
 OBJS := $(patsubst src/kernel/%.c, bin/kernel/%.o, $(SRCS))
