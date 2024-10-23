@@ -340,7 +340,7 @@ protected_mode:
         mov fs, bx
         pop eax
         mov esi, k_info
-        jmp $
+        ; jmp $
         jmp eax
     jmp $
 bits 16
@@ -691,8 +691,37 @@ load_elf:
     cmp dword [esi], elf_magic
     jne .err
     
+    xor ebx, ebx
+    mov ebx, [esi + 28]
+    lea ebx, [esi + ebx]
     .map_seg_l:
-        
+        cmp dword [ebx], 0
+        je .exit
+        mov esi, [ebx + 8]
+        mov edi, [ebx + 4]
+        add edi, [ebp - 8]
+        mov ecx, [ebx + 24]
+        cmp ecx, 0
+        je .map_next
+        xor edx, edx
+        shr ecx, 12
+        .mloop:
+            call map_addr
+            add edi, 0x1000
+            add esi, 0x1000
+            ; jmp $
+            inc edx
+            cmp edx, ecx
+            jb .mloop
+        .map_next:
+            add ebx, 32
+            jmp .map_seg_l
+    .exit:
+    ; jmp $
+    mov esi, [ebp - 8]
+    mov eax, [esi + 24]; entry address
+    ; debug
+    add esp, 64
     pop ebp
     ret
     jmp $
@@ -710,6 +739,8 @@ map_addr:
     mov ebp, esp
     mov [ebp - 8], edi
     mov [ebp - 12], esi
+    push edi
+    push esi
     
     shr esi, 22
     lea esi, [page_table + esi * 4]
@@ -732,6 +763,8 @@ map_addr:
         lea esi, [esi + eax * 4]
         mov [esi], edi
         or byte [esi], 1
+    pop esi
+    pop edi
     pop ebp
     ret
     jmp $
