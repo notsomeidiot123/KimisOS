@@ -4,11 +4,13 @@ extern kmain
 section .text
 global _start
 _start:
-    mov ebx, 0xb8002
-    mov word [ebx], 0xf41
+    mov esp, stack_top
+    mov ebp, stack_top
+    push esi
+    ; jmp $
     call kmain
     jmp $
     
-section .data
-string: db "Why even use grub at this point?", 0xa, 0xd, "https://github.com/notsomeidiot123 | someidiot332 on Reddit :3", 0xa, 0xd
-db "Check comments for more info ^^", 0x0
+section .bss
+stack_bottom: resb 0x4000
+stack_top:
