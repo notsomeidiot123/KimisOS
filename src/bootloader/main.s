@@ -700,7 +700,7 @@ load_elf:
         mov esi, [ebx + 8]
         mov edi, [ebx + 4]
         add edi, [ebp - 8]
-        mov ecx, [ebx + 24]
+        mov ecx, [ebx + 20]
         cmp ecx, 0
         je .map_next
         xor edx, edx
