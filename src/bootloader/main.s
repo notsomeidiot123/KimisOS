@@ -779,7 +779,6 @@ k_info:
     .yres:              dw 25
     .framebuffer_ptr:   dd 0xb8000
     .loaded_modules:    dd 0
-    ;NOTE: remember to search for a free pg directory for the paddr map
 ;loaded_modules points to a struct array containing a ptr to the entry point of each pre-loaded module to be executed during startup
 ;module_struct:
     ;.entry_point: dd 0
@@ -792,9 +791,6 @@ sacrifice1: dd 0
 sacrifice0: dd 1
 kernel_physical_size: dd 0
 kload_paddr: dd 0x20000
-
-
-; elf_magic EQU 0x7f454c46
 elf_magic EQU 0x464c457f
 file_buffer EQU 0xa000
 root_dir EQU 0x1000
