@@ -1,5 +1,6 @@
 #pragma once
 #include <stdint.h>
+#include "kstdlib.h"
 
 #define PD_PRESENT  0x0001
 #define PD_USER_RW  0x0002

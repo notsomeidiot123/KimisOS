@@ -57,6 +57,15 @@ void printf(char *string, ...){
                     itoa(num, numb, 10);
                     debug_puts(numb);
                     continue;
+                case 'x':
+                    // debug_puts(":3");
+                    string += 2;
+                    int32_t hex = va_arg(vars, int32_t);
+                    char hnumb[12];
+                    itoa(hex, hnumb, 16);
+                    strpad(hnumb, '0', 8);
+                    debug_puts(hnumb);
+                    continue;
             }
         }
         outb(com_ports[0], *string);

@@ -1,6 +1,8 @@
-#include "memory.h"
+#pragma once
+// #include "memory.h"
+#include "../drivers/serial.h"
 typedef struct kernel_info{
-    memory_map_entry *mmap_ptr;
+    void *mmap_ptr;
     uint16_t mmap_entry_count;
     uint8_t padding;
     uint8_t pixel_depth;
