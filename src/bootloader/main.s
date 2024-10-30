@@ -779,6 +779,7 @@ k_info:
     .yres:              dw 25
     .framebuffer_ptr:   dd 0xb8000
     .loaded_modules:    dd 0
+    .loaded_module_c:   dd 0
 ;loaded_modules points to a struct array containing a ptr to the entry point of each pre-loaded module to be executed during startup
 ;module_struct:
     ;.entry_point: dd 0

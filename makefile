@@ -2,7 +2,7 @@ CC := gcc
 AS := nasm
 CFLAGS = -c -mno-sse -mno-sse2 -mno-red-zone -ffreestanding -m32 -nostdlib -O3 -fno-pie -fno-stack-protector -mno-mmx
 BL_ASFLAGS := -f bin
-SRCS := $(wildcard src/kernel/*.c)
+SRCS := $(wildcard src/kernel/*/*.c)
 OBJS := $(patsubst src/kernel/%.c, bin/kernel/%.o, $(SRCS))
 
 all: bootloader tools kernel
@@ -16,12 +16,15 @@ tools:
 bootloader:
 	$(AS) src/bootloader/main.s $(BL_ASFLAGS) -o bin/bootloader.bin
 
-kernel: $(OBJS)
+# kernel: $(OBJS)
+kernel:
 	nasm src/kernel/entry.s -o bin/kernel/entry.o -f elf32
+	sh c_build_helper.sh
 	# ld -T linker.ld bin/kernel/entry.o bin/kernel/*.o -melf_i386
 	ld -T linker.ld bin/kernel/*.o -melf_i386
-%.o: $(SRCS)
-	$(CC) $(CFLAGS) $< -o $@
+# %.o: $(SRCS)
+# 	mkdir -p bin/kernel/$(shell dirname $@)
+# 	$(CC) $(CFLAGS) $< -o $@
 
 init:
 	@mkdir mount

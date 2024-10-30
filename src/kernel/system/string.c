@@ -1,0 +1,52 @@
+#include <stdint.h>
+#include "../shared/string.h"
+//res needs to allocate enough space for 12 chars minimum
+void itoa(int64_t data, char *res, uint8_t base){
+    char carr[] = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    char negative = 0;
+    if(res == 0) return;
+    if(data < 0 && base == 10){
+        data *= -1;
+        negative = 1;
+    }
+    int ptr = 0;
+    char buffer[12] = {0};
+    // res[11] = 0;
+    if(data == 0){
+        res[0] = '0';
+        res[1] = 0;
+    }
+    uint32_t tmp = data;
+    while(tmp){
+        buffer[ptr++] = carr[tmp % base];
+        tmp /= base;
+    }
+    uint32_t rindex = 0;
+    res[ptr] = 0;
+    while(ptr > 0){
+        res[--ptr + negative] = buffer[rindex++];
+    }
+    res[0] += negative * '-';
+    return;
+}
+
+void strcpy(char *src, char *dest){
+    if(src == 0 || dest == 0){
+        return;
+    }
+    uint32_t len = strlen(src);
+    for(int i = 0; i < len; i++){
+        dest[i] = src[i];
+    }
+    dest[len] = 0;
+}
+
+void strpad(char *string, char padding, uint32_t length){
+    if(strlen(string) >= padding) return;
+    char tmp[length];
+    for(int i = 0; i < length - strlen(string); i++){
+        tmp[i] = padding;
+    }
+    strcpy(string, tmp + length - strlen(string));
+    strcpy(tmp, string);
+}
