@@ -61,5 +61,11 @@ typedef struct memory_map_entry{
 }__attribute__((packed))mmap_entry_t;
 
 void map(void *vaddr, void *paddr, uint32_t flags);
+void unmap(void *vaddr);
 void map_4mb(void *vaddr, void* paddr, uint32_t flags);
+uint32_t get_paddr(void *addr);
+uint32_t pm_alloc();
+void pm_reserve(uint32_t addr);
+void pm_free(uint32_t addr);
+
 int pm_init(kernel_info_t *kernel_info);

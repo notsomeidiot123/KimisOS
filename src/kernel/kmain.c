@@ -6,5 +6,6 @@
 extern void kmain(kernel_info_t *kernel_info){
     init_serial();
     pm_init(kernel_info);
+    
     return;
 }

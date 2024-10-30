@@ -9,7 +9,7 @@ uint8_t pm_map[mmap_count];
 uint32_t total_memory;
 uint32_t total_memory_usable;
 uint32_t last_allocated;
-
+extern uint32_t _start;
 
 uint32_t pm_alloc(){
     for(uint32_t i = 0; i < mmap_count; i++){
@@ -29,7 +29,7 @@ void pm_reserve(uint32_t address){
 
 int pm_init(kernel_info_t *kernel_info){
     mmap_entry_t *mmap = (mmap_entry_t*)(kernel_info->mmap_ptr);
-    // printf("mmap count: %d", kernel_info->mmap_entry_count);
+    printf("mmap count: %d\n| start  | length |type|\n|--------|--------|----|\n", kernel_info->mmap_entry_count);
     for(uint32_t i = 0; i < mmap_count; i++){
         pm_map[i] = 0;
     }
@@ -48,12 +48,21 @@ int pm_init(kernel_info_t *kernel_info){
             //     printf("%d, %x, %d\n", j >> 3, pm_map[(mmap[i].entry_base >> 12 ) + (j >> 3)], mmap[i].type);
             // }
         }
-        
+        // printf("|%x|", mmap[i].entry_base);
+        // printf("%x",  mmap[i].entry_length);
+        // printf("|%d   |\n", mmap[i].type);
     }
     for(uint32_t i = 0; i < 512; i++){
         pm_reserve(i * 4096);
     }
     
+    void *kernel_addr = (void *)_start;
+    while(get_paddr(kernel_addr)){
+    
+        printf("%x\n", kernel_addr);
+        pm_reserve(get_paddr(kernel_addr));
+        kernel_addr += 0x1000;
+    }
 }
 void map(void *vaddr, void *paddr, uint32_t flags){
     uint32_t pd_index = (uint32_t)vaddr >> 22;
@@ -83,8 +92,10 @@ void unmap(void *vaddr){
 }
 void map_4mb(void *vaddr, void *paddr, uint32_t flags){
     //just wanted to get the prototype out
+    //!TODO: Finish mapping and unmapping 4mb pages
 }
 uint32_t get_paddr(void *addr){
+    //!TODO: Support 4mb pages
     uint32_t vaddr = (uint32_t)addr;
     uint32_t pd_index = vaddr >> 22;
     uint32_t pt_index = vaddr >> 12 & 0x3ff;
@@ -93,5 +104,5 @@ uint32_t get_paddr(void *addr){
         return 0;
     }
     uint32_t *pt = (uint32_t *)(0xffc00000 + (0x400 * pd_index));
-    return pt[pt_index];
+    return pt[pt_index] & ~(pt[pt_index] & 0xfff);
 }

@@ -404,8 +404,8 @@ paging_en:
     mov cr3, eax
     
     ;enable recursive paging
-    mov [eax + 1023], eax
-    or [eax + 1023], dword 0b0_0001_0000_1001
+    mov [eax + 1023*4], eax
+    or [eax + 1023*4], dword 0b0_0000_0000_0011
     
     ret
 open_file:
