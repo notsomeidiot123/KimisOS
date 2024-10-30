@@ -2,13 +2,13 @@
 #include "../shared/memory.h"
 #include "../shared/kstdlib.h"
 
-#define mmap_count 0x200000
+#define mmap_count 0x20000
 
 uint8_t pm_map[mmap_count];
 
-uint32_t total_memory;
-uint32_t total_memory_usable;
-uint32_t last_allocated;
+uint32_t total_memory = 0;
+uint32_t total_memory_usable = 0;
+uint32_t last_allocated = 0;
 extern uint32_t _start;
 
 uint32_t pm_alloc(){
@@ -31,31 +31,35 @@ int pm_init(kernel_info_t *kernel_info){
     mmap_entry_t *mmap = (mmap_entry_t*)(kernel_info->mmap_ptr);
     printf("mmap count: %d\n| start  | length |type|\n|--------|--------|----|\n", kernel_info->mmap_entry_count);
     for(uint32_t i = 0; i < mmap_count; i++){
-        pm_map[i] = 0;
+        pm_map[i] = 0xff;
     }
     for(uint32_t i = 0; i < kernel_info->mmap_entry_count; i++){
         for(uint32_t j = 0; j < (mmap[i].entry_length >> 12); j++){
+            if(mmap[i].entry_base + (j << 12) <= mmap[i-1].entry_base + mmap[i-1].entry_length){
+                continue;
+            }
             // printf("j = %d\nIndex:%x\n", j, (mmap[i].entry_base >> 12) + (j & 3));
             if(mmap[i].type != BIOS_MMAP_USABLE){
-                pm_map[(mmap[i].entry_base >> 12) + (j >> 3)] |= 1 << (j & 7);
+                pm_map[(mmap[i].entry_base >> 15) + (j >> 3)] |= 1 << (j & 7) + ((mmap[i].entry_base >> 12) & 7);
             }
             else{
                 // uint8_t tmp = pm_map[(mmap[i].entry_base >> 12 ) + (j >> 3)];
                 // tmp &= ~(1 << (j & 3));
-                pm_map[(mmap[i].entry_base >> 12) + (j >> 3)] &= ~(1 << (j & 7));
+                pm_map[(mmap[i].entry_base >> 15) + (j >> 3)] &= ~(1 << ((j & 7) + ((mmap[i].entry_base >> 12) & 7)));
             }
             // if(j % 8 == 7){
             //     printf("%d, %x, %d\n", j >> 3, pm_map[(mmap[i].entry_base >> 12 ) + (j >> 3)], mmap[i].type);
             // }
         }
-        // printf("|%x|", mmap[i].entry_base);
-        // printf("%x",  mmap[i].entry_length);
-        // printf("|%d   |\n", mmap[i].type);
+        printf("|%x|", mmap[i].entry_base);
+        printf("%x",  mmap[i].entry_length);
+        printf("|%d   |\n", mmap[i].type);
     }
     for(uint32_t i = 0; i < 512; i++){
         pm_reserve(i * 4096);
     }
     
+    printf("%x", pm_map);
     void *kernel_addr = (void *)_start;
     while(get_paddr(kernel_addr)){
     
