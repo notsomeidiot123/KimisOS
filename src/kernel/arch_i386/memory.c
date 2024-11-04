@@ -29,7 +29,7 @@ void pm_reserve(uint32_t address){
 
 int pm_init(kernel_info_t *kernel_info){
     mmap_entry_t *mmap = (mmap_entry_t*)(kernel_info->mmap_ptr);
-    printf("mmap count: %d\n| start  | length |type|\n|--------|--------|----|\n", kernel_info->mmap_entry_count);
+    // printf("mmap count: %d\n| start  | length |type|\n|--------|--------|----|\n", kernel_info->mmap_entry_count);
     for(uint32_t i = 0; i < mmap_count; i++){
         pm_map[i] = 0xff;
     }
@@ -51,19 +51,19 @@ int pm_init(kernel_info_t *kernel_info){
             //     printf("%d, %x, %d\n", j >> 3, pm_map[(mmap[i].entry_base >> 12 ) + (j >> 3)], mmap[i].type);
             // }
         }
-        printf("|%x|", mmap[i].entry_base);
-        printf("%x",  mmap[i].entry_length);
-        printf("|%d   |\n", mmap[i].type);
+        // printf("|%x|", mmap[i].entry_base);
+        // printf("%x",  mmap[i].entry_length);
+        // printf("|%d   |\n", mmap[i].type);
     }
     for(uint32_t i = 0; i < 512; i++){
         pm_reserve(i * 4096);
     }
     
-    printf("%x", pm_map);
+    // printf("%x", pm_map);
     void *kernel_addr = (void *)_start;
     while(get_paddr(kernel_addr)){
     
-        printf("%x\n", kernel_addr);
+        // printf("%x\n", kernel_addr);
         pm_reserve(get_paddr(kernel_addr));
         kernel_addr += 0x1000;
     }
@@ -75,6 +75,7 @@ void map(void *vaddr, void *paddr, uint32_t flags){
     uint32_t *pd = (uint32_t*)0xfffff000;
     if(!pd[pd_index]){
         pd[pd_index] = pm_alloc() | 1;
+        asm volatile("invlpg (%0)" : : "b"(0xffc00000 + (pd_index * 0x400)) : "memory");
     }
     uint32_t *pt = (uint32_t *)(0xffc00000 + (pd_index * 0x400));
     pt[pt_index] = (uint32_t)paddr | flags;

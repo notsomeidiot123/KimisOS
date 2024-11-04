@@ -65,6 +65,17 @@ If all else fails, the bootloader will attempt to enable the a20 line by using t
 
 While any GDT loaded for the Kernel will work, once the Kernel wants to load user processes, it will fail to locate user segments in the GDT if the one loaded is not the one expected. Because of this, the Kernel will need to load it's own if the one it wants is not loaded by this bootloader. To allow for detection, the key "0xaa55" is written at the end of the GDT, marking the last segment invalid, but allowing for the detection of the correct GDT being pre-loaded. This detection will only occurr during boot time, and unexpected writes will cause the Kernel to crash.
 
+#### GDT Layout:
+|INDEX|ENTRY TYPE|
+|-----|----------|
+|0x00 |Null Entry|
+|0x08 |Kernel Code (16)|
+|0x10 |Kernel Code (32)|
+|0x18 |Kernel Data (32)|
+|0x20 |User Code (32)  |
+|0x28 |User Data (32)  |
+|0x30 |TSS			   |
+
 ### Error Codes
 
 |Error Code|Description|

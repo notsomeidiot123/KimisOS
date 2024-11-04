@@ -20,6 +20,7 @@ bootloader:
 kernel:
 	nasm src/kernel/entry.s -o bin/kernel/entry.o -f elf32
 	sh c_build_helper.sh
+	nasm src/kernel/arch_i386/idt.s -o bin/kernel/idt.o -felf32
 	# ld -T linker.ld bin/kernel/entry.o bin/kernel/*.o -melf_i386
 	ld -T linker.ld bin/kernel/*.o -melf_i386
 # %.o: $(SRCS)
