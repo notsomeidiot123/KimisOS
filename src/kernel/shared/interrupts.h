@@ -21,6 +21,8 @@ typedef struct idt{
 #define IDT_DPL_KERNEL  0 << 5
 #define IDT_DPL_USER    3 << 5
 
+cpu_registers_t *syscall(cpu_registers_t * regs);
+
 inline void enable_interrupts(){
     asm volatile("sti");
 }

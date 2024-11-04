@@ -21,7 +21,7 @@ cpu_registers_t *(*interrupt_handlers[16])(cpu_registers_t *regs) = {0};
 
 void _irq_handler(cpu_registers_t *regs){
     if(regs->int_no == 0x80){
-        syscall(regs);
+        regs = syscall(regs);
     }
     else if(interrupt_handlers[regs->int_no - 32])
     {
