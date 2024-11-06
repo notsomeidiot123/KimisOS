@@ -18,7 +18,7 @@ typedef struct idt_entry{
     uint16_t offset_high;
 }__attribute__((packed)) idt_entry_t;
 
-cpu_registers_t *(*interrupt_handlers[16])(cpu_registers_t *regs) = {0};
+cpu_registers_t *(*volatile interrupt_handlers[16])(cpu_registers_t *regs) = {0};
 idt_t idt_desc;
 
 idt_entry_t idt_table[256];
