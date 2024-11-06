@@ -62,6 +62,10 @@ cpu_registers_t *syscall(cpu_registers_t *regs){
     
 }
 
+void install_irq_handler(void (*handler)(), uint8_t irqno){
+    interrupt_handlers[irqno] = handler;
+}
+
 void init_idt(){
     for(uint32_t i = 0; i < 32; i++){
         set_idt_entry(i, (_isr0 + ((_isr1 - _isr0) * i)), IDT_GATE_INT, 0x10);

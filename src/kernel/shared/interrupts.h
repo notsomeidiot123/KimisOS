@@ -29,3 +29,4 @@ inline void enable_interrupts(){
 inline void disable_interrupts(){
     asm volatile("cli");
 }
+void install_irq_handler(void (*handler)(), uint8_t irqno);
