@@ -5,6 +5,11 @@ void itoa(int64_t data, char *res, uint8_t base){
     char carr[] = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     char negative = 0;
     if(res == 0) return;
+    if(data == 0){
+        res[0] = '0';
+        res[1] = 0;
+        return;
+    }
     if(data < 0 && base == 10){
         data *= -1;
         negative = 1;

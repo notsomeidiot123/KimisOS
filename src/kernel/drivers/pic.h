@@ -15,4 +15,12 @@
 #define PIC_ICW1_INIT   0x10
 
 #define PIC_ICW4_8086   0x01
-#define P
+#define PIC_ICW4_AUTO   0x02
+#define PIC_ICW4_BUF_S  0x08
+#define PIC_ICW4_BUF_M  0x0c
+#define PIC_ICW4_SFNM   0x10
+
+void init_pic(uint8_t idt_index);
+void pic_disable();
+void pic_setmask(uint8_t mask, uint16_t pic);
+uint8_t pic_getmask(uint16_t pic);

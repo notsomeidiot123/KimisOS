@@ -32,7 +32,7 @@ global _isr30
 global _isr31
 
 global load_idt
-
+section .text
 load_idt:
     push ebp
     mov ebp, esp
@@ -249,98 +249,93 @@ global _irq15
 global _syscall
 _irq0:
     cli
-    push 0
-    push 32
+    ; jmp $
+    push dword 0
+    push dword 32
     jmp _irq_common_stub
 _irq1:
     cli
-    push 0
-    push 33
+    push dword 0
+    push dword 33
     jmp _irq_common_stub
 _irq2:
     cli
-    push 0
-    push 34
+    push dword 0
+    push dword 34
     jmp _irq_common_stub
 _irq3:
     cli
-    push 0
-    push 35
+    push dword 0
+    push dword 35
     jmp _irq_common_stub
 _irq4:
     cli
-    push 0
-    push 36
+    push dword 0
+    push dword 36
     jmp _irq_common_stub
 _irq5:
     cli
-    push 0
-    push 37
+    push dword 0
+    push dword 37
     jmp _irq_common_stub
 _irq6:
     cli
-    push 0
-    push 38
+    push dword 0
+    push dword 38
     jmp _irq_common_stub
 _irq7:
     cli
-    push 0
-    push 39
+    push dword 0
+    push dword 39
     jmp _irq_common_stub
 _irq8:
     cli
-    push 0
-    push 40
+    push dword 0
+    push dword 40
     jmp _irq_common_stub
 _irq9:
     cli
-    push 0
-    push 41
+    push dword 0
+    push dword 41
     jmp _irq_common_stub
 _irq10:
     cli
-    push 0
-    push 42
+    push dword 0
+    push dword 42
     jmp _irq_common_stub
 _irq11:
     cli
-    push 0
-    push 43
+    push dword 0
+    push dword 43
     jmp _irq_common_stub
 _irq12:
     cli
-    push 0
-    push 44
+    push dword 0
+    push dword 44
     jmp _irq_common_stub
 _irq13:
     cli
-    push 0
-    push 45
+    push dword 0
+    push dword 45
     jmp _irq_common_stub
 _irq14:
     cli
-    push 0
-    push 46
+    push dword 0
+    push dword 46
     jmp _irq_common_stub
 _irq15:
     cli
-    push 0
-    push 47
+    push dword 0
+    push dword 47
     jmp _irq_common_stub
 
 _syscall:
     cli
-    push 0
-    push 0x80
+    push dword 0
+    push dword 0x80
 
 _irq_common_stub:
-    push eax
-    push ebx
-    push ecx
-    push edx
-    push ebp
-    push esi
-    push edi
+    pushad
     push ds
     push es
     push fs
@@ -354,12 +349,6 @@ _irq_common_stub:
     pop fs
     pop es
     pop ds
-    pop edi
-    pop esi
-    pop ebp
-    pop edx
-    pop ecx
-    pop ebx
-    pop eax
+    popad
     add esp, 8
     iret

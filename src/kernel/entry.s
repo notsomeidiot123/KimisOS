@@ -4,6 +4,7 @@ extern kmain
 section .text
 global _start
 _start:
+    cld
     mov esp, stack_top
     mov ebp, stack_top
     push esi
