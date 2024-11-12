@@ -41,17 +41,16 @@ void _irq_handler(cpu_registers_t *regs){
     }
     else if(interrupt_handlers[regs->int_no - 32])
     {
-        if(regs->int_no == 32){
-            // printf("Tick\n");
-            // printf("%x\n", regs->int_no);
-        }
+        // printf("found one for an int");
         regs = interrupt_handlers[regs->int_no - 32](regs);
+        // printf("returned;")
         // printf("eip: %x", regs->eip);
-        outb(0x20, 0x20);
-        if(regs->int_no >= 0x28){
-            outb(0xa0, 0x20);
-        }
     }
+    outb(0x20, 0x20);
+    if(regs->int_no >= 0x28){
+        outb(0xa0, 0x20);
+    }
+    return;
 }
 void _isr_handler(cpu_registers_t *regs){
     printf("Error!! %x\n", regs->eip);
@@ -60,6 +59,16 @@ void _isr_handler(cpu_registers_t *regs){
 
 cpu_registers_t *syscall(cpu_registers_t *regs){
     
+}
+
+extern void panic_hold(cpu_registers_t *regs);
+
+void kernel_panic(char *message, cpu_registers_t *regs){
+    printf("Kernel Panic!\nAn fatal error occured, and could not be recovered.\nError: ");
+    printf(message);
+    printf("System halting...\n");
+    if(regs != 0) panic_hold(regs);
+    asm volatile ("jmp .");
 }
 
 void install_irq_handler(void (*handler)(), uint8_t irqno){
@@ -74,7 +83,7 @@ void init_idt(){
     // printf("last ")
     for(uint32_t i = 0; i < 16; i++){
         set_idt_entry(i + 32, (_irq0 + ((_irq1 - _irq0) * i)), IDT_GATE_INT, 0x10);
-        printf("int %d: address: %x\n", i + 32, _irq0 + (_irq1 - _irq0) * i);
+        // printf("int %d: address: %x\n", i + 32, _irq0 + (_irq1 - _irq0) * i);
     }
     
     idt_desc.pointer = (uint32_t)&idt_table;

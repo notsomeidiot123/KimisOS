@@ -4,11 +4,11 @@
 
 #define mmap_count 0x20000
 
-uint8_t pm_map[mmap_count];
+uint8_t volatile pm_map[mmap_count];
 
 uint32_t total_memory = 0;
 uint32_t total_memory_usable = 0;
-uint32_t last_allocated = 0;
+uint32_t volatile last_allocated = 0;
 extern uint32_t _start;
 
 uint32_t pm_alloc(){

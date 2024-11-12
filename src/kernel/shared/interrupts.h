@@ -29,4 +29,5 @@ inline void enable_interrupts(){
 inline void disable_interrupts(){
     asm volatile("cli");
 }
+void kernel_panic(char *msg, cpu_registers_t *regs);
 void install_irq_handler(void (*handler)(), uint8_t irqno);

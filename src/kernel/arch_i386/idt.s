@@ -352,3 +352,19 @@ _irq_common_stub:
     popad
     add esp, 8
     iret
+
+global panic_hold
+
+panic_hold:
+    
+    push ebp
+    mov ebp, esp
+    
+    mov esp, [ebp + 8]
+    
+    pop gs
+    pop fs
+    pop es
+    pop ds
+    popad
+    jmp $

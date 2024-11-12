@@ -1,6 +1,8 @@
 #pragma once
 // #include "memory.h"
 #include "../drivers/serial.h"
+#include "interrupts.h"
+
 typedef struct kernel_info{
     void *mmap_ptr;
     uint16_t mmap_entry_count;
@@ -12,3 +14,5 @@ typedef struct kernel_info{
     void *loaded_modues;
     uint32_t loaded_module_count;
 }__attribute__((packed)) kernel_info_t;
+
+#define PANIC(m) kernel_panic(m, 0)
