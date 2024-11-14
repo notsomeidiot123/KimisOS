@@ -344,7 +344,7 @@ _irq_common_stub:
     push esp;push argument
     call _irq_handler
     pop esp
-    
+    mov esp, eax
     pop gs
     pop fs
     pop es

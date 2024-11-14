@@ -12,3 +12,4 @@ inline uint32_t strlen(char *str){
     return c;
 }
 void strcpy(char *src, char *dest);
+void memcpy(char *src, char *dest, uint32_t c);

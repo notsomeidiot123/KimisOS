@@ -22,3 +22,4 @@ typedef struct{
 
 cpu_registers_t* schedule(cpu_registers_t *regs);
 void init_scheduler();
+void thread_start(void (*function)(), uint32_t *exit_code);

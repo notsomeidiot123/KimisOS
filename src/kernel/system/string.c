@@ -34,7 +34,11 @@ void itoa(int64_t data, char *res, uint8_t base){
     res[0] += negative * '-';
     return;
 }
-
+void memcpy(char *src, char *dest, uint32_t c){
+    for(uint32_t i = 0; i < c; i++){
+        dest[i] = src[i];
+    }
+}
 void strcpy(char *src, char *dest){
     if(src == 0 || dest == 0){
         return;

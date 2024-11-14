@@ -35,7 +35,8 @@ inline void set_idt_entry(uint32_t index, void *ptr, uint8_t flags, uint16_t seg
 }
 
 
-void _irq_handler(cpu_registers_t *regs){
+cpu_registers_t *_irq_handler(cpu_registers_t *regs){
+    regs->esp = (uint32_t)regs;
     if(regs->int_no == 0x80){
         regs = syscall(regs);
     }
@@ -50,7 +51,7 @@ void _irq_handler(cpu_registers_t *regs){
     if(regs->int_no >= 0x28){
         outb(0xa0, 0x20);
     }
-    return;
+    return regs;
 }
 void _isr_handler(cpu_registers_t *regs){
     printf("Error!! %x\n", regs->eip);
