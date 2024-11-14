@@ -49,22 +49,23 @@ void printf(char *string, ...){
     va_start(vars, string);
     while(*string){
         if(*string == '%'){
+            int32_t num = 0;
+            char numb[12];
             switch(*(string + 1)){
                 case 'd':
                     string += 2;
-                    int32_t num = va_arg(vars, int32_t);
-                    char numb[12];
+                    num = va_arg(vars, int32_t);
                     itoa(num, numb, 10);
                     debug_puts(numb);
                     continue;
                 case 'x':
                     // debug_puts(":3");
                     string += 2;
-                    int32_t hex = va_arg(vars, int32_t);
-                    char hnumb[12];
-                    itoa(hex, hnumb, 16);
-                    strpad(hnumb, '0', 8);
-                    debug_puts(hnumb);
+                    num = va_arg(vars, int32_t);
+                    // char hnumb[12];
+                    itoa(num, numb, 16);
+                    strpad(numb, '0', 8);
+                    debug_puts(numb);
                     continue;
             }
         }

@@ -6,7 +6,7 @@
 
 process_t volatile processes[0x10000];
 uint32_t volatile process_queue[0x10000];
-uint32_t active_processes;
+uint32_t volatile active_processes;
 uint32_t volatile current_pid;
 uint32_t volatile queue_length;
 uint32_t volatile current_queue_index;
