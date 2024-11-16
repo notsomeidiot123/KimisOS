@@ -14,7 +14,7 @@
 #define PD_PAT      0x1000
 #define PD_LINK_N   0x0200
 #define PD_LINK_L   0x0400
-#define PD_ALLOC    0x0800
+#define PD_SYS      0x0800
 
 #define PT_PRESENT  0X0001
 #define PT_USER_RW  0x0002
@@ -27,7 +27,7 @@
 #define PT_GLOBAL   0x0100
 #define PT_LINK_N   0x0200
 #define PT_LINK_L   0x0400
-#define PT_ALLOC    0x0800
+#define PT_SYS      0x0800
 
 #define BIOS_MMAP_USABLE 1
 #define BIOS_MMAP_RESERVED 2
@@ -80,3 +80,6 @@ inline void *get_cr3(){
     return cr3;
 }
 int pm_init(kernel_info_t *kernel_info);
+
+void *kmalloc(uint32_t size_pgs);//allocates in multiples of 4096
+void *kfree(void *vaddr);

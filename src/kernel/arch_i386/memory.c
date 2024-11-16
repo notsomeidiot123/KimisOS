@@ -16,6 +16,7 @@ uint32_t pm_alloc(){
     for(uint32_t i = 0; i < mmap_count; i++){
         for(int j = 0; j < 8; j++){
             if(!(pm_map[i] & (1 << j))){
+                pm_map[i] |= (1 << j);
                 return (i << 3 | j) << 12;
             }
         }
@@ -92,6 +93,7 @@ void unmap(void *vaddr){
         return;
     }
     uint32_t *pt = (uint32_t *)(0xffc00000 + (pd_index * 0x400));
+    pt[pt_index] = 0;
     // uint32_t paddr = pt[pt_index];
     // paddr ^= (paddr & 0xfff);
     // pm_free(paddr);
@@ -126,23 +128,41 @@ uint32_t get_pflags(void *vaddr){
 void *get_new_page(uint32_t flags){
     uint32_t i = 0;
     uint32_t paddr = pm_alloc();
-    while(get_paddr(paddr + (i * 4096))){
+    while(get_paddr((void*)paddr + (i * 4096))){
         i++;
     }
-    map(paddr+(i*4096), paddr, flags);
+    map((void *)paddr+(i*4096), (void *)paddr, flags);
 }
 void *kmalloc(uint32_t size_pgs){
-    
+    uint32_t i = 1 << 10; //4mb/4096 (start search at 1mb line)
+    while(i < (1 << 20)){
+        uint8_t found = 1;
+        for(uint32_t j = 0; j < size_pgs; j++){
+            if(get_paddr((void *)((i + j) << 12))){
+                found = 0;
+                break;
+            }
+        }
+        if(!found){
+            i++;
+            continue;
+        }
+        for(uint32_t j = 0; j < size_pgs; j++){
+            uint32_t flags = PT_PRESENT | PT_SYS | (PT_LINK_L * (j != 0)) | (PT_LINK_N * (j < (size_pgs - 1)));
+            map((void *)((i + j)<<12), (void*)pm_alloc(), flags);
+        }
+        return (void*)(i << 12);
+    }
 }
 void *kfree(void *vaddr){
     uint32_t addr = (uint32_t)vaddr;
     addr &= ~0xfff;
-    while(get_pflags(addr)&PT_LINK_L) addr -= 0x1000;
-    while(get_pflags(addr)&PT_LINK_N){
-        uint32_t paddr = get_paddr(addr);
+    while(get_pflags((void *)addr)&PT_LINK_L) addr -= 0x1000;
+    do{
+        uint32_t paddr = get_paddr((void *)addr);
         pm_free(paddr);
-        unmap(addr);
+        unmap((void *)addr);
         addr += 0x1000;
-    }
+    }while(get_pflags((void *)addr)&PT_LINK_N);
     return 0;
 }
