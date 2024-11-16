@@ -8,4 +8,4 @@ diskwrite
 *.dump
 intlog.*
 *.img
-.gitignore
+.vscode

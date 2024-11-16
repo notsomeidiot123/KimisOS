@@ -10,6 +10,7 @@ uint32_t total_memory = 0;
 uint32_t total_memory_usable = 0;
 uint32_t volatile last_allocated = 0;
 extern uint32_t _start;
+extern uint32_t _end;
 
 uint32_t pm_alloc(){
     for(uint32_t i = 0; i < mmap_count; i++){
@@ -26,7 +27,6 @@ void pm_free(uint32_t address){
 void pm_reserve(uint32_t address){
     pm_map[address >> 15] |= 1 << ((address>>12) & 7);
 }
-
 int pm_init(kernel_info_t *kernel_info){
     mmap_entry_t *mmap = (mmap_entry_t*)(kernel_info->mmap_ptr);
     // printf("mmap count: %d\n| start  | length |type|\n|--------|--------|----|\n", kernel_info->mmap_entry_count);
@@ -76,6 +76,8 @@ void map(void *vaddr, void *paddr, uint32_t flags){
     if(!pd[pd_index]){
         pd[pd_index] = pm_alloc() | 1;
         asm volatile("invlpg (%0)" : : "b"(0xffc00000 + (pd_index * 0x400)) : "memory");
+        uint32_t *pt = (uint32_t *)(0xffc00000 + (pd_index * 0x400));
+        for(uint32_t i = 0; i < 0x400; i++)pt[i] = 0;
     }
     uint32_t *pt = (uint32_t *)(0xffc00000 + (pd_index * 0x400));
     pt[pt_index] = (uint32_t)paddr | flags;
@@ -90,9 +92,9 @@ void unmap(void *vaddr){
         return;
     }
     uint32_t *pt = (uint32_t *)(0xffc00000 + (pd_index * 0x400));
-    uint32_t paddr = pt[pt_index];
-    paddr ^= (paddr & 0xfff);
-    pm_free(paddr);
+    // uint32_t paddr = pt[pt_index];
+    // paddr ^= (paddr & 0xfff);
+    // pm_free(paddr);
     asm volatile("invlpg (%0)  " : : "b"(vaddr) : "memory");
 }
 void map_4mb(void *vaddr, void *paddr, uint32_t flags){
@@ -110,4 +112,37 @@ uint32_t get_paddr(void *addr){
     }
     uint32_t *pt = (uint32_t *)(0xffc00000 + (0x400 * pd_index));
     return pt[pt_index] & ~(pt[pt_index] & 0xfff);
+}
+uint32_t get_pflags(void *vaddr){
+    uint32_t pd_index = (uint32_t)vaddr >> 22;
+    uint32_t pt_index = (uint32_t)vaddr >> 12 & 0x3ff;
+    uint32_t *pd = (uint32_t *)0xfffff000;
+    if(!pd[pd_index]){
+        return 0;
+    }
+    uint32_t *pt = (uint32_t *)(0xffc00000 + (0x400 * pd_index));
+    return (pt[pt_index] & 0xfff);
+}
+void *get_new_page(uint32_t flags){
+    uint32_t i = 0;
+    uint32_t paddr = pm_alloc();
+    while(get_paddr(paddr + (i * 4096))){
+        i++;
+    }
+    map(paddr+(i*4096), paddr, flags);
+}
+void *kmalloc(uint32_t size_pgs){
+    
+}
+void *kfree(void *vaddr){
+    uint32_t addr = (uint32_t)vaddr;
+    addr &= ~0xfff;
+    while(get_pflags(addr)&PT_LINK_L) addr -= 0x1000;
+    while(get_pflags(addr)&PT_LINK_N){
+        uint32_t paddr = get_paddr(addr);
+        pm_free(paddr);
+        unmap(addr);
+        addr += 0x1000;
+    }
+    return 0;
 }

@@ -35,6 +35,10 @@
 #define BIOS_MMAP_NVS 4
 #define BIOS_MMAP_BAD_MEMORY 5
 
+#define KMALLOC_USED        1
+#define KMALLOC_LINK_NEXT   2
+#define KMALLOC_LINK_LAST   4
+
 typedef struct BIOS_data{
     uint16_t com_ports[4];
     uint16_t lpt_ports[3];
