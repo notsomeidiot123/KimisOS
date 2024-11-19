@@ -1,7 +1,7 @@
 #include <stdint.h>
 #include "../shared/memory.h"
 #include "../shared/kstdlib.h"
-
+#include "../drivers/cpuio.h"
 #define mmap_count 0x20000
 
 uint8_t volatile pm_map[mmap_count];
@@ -11,6 +11,8 @@ uint32_t total_memory_usable = 0;
 uint32_t volatile last_allocated = 0;
 extern uint32_t _start;
 extern uint32_t _end;
+mmap_entry_t mmap;
+uint32_t mmap_entry_c;
 
 uint32_t pm_alloc(){
     for(uint32_t i = 0; i < mmap_count; i++){
@@ -52,9 +54,9 @@ int pm_init(kernel_info_t *kernel_info){
             //     printf("%d, %x, %d\n", j >> 3, pm_map[(mmap[i].entry_base >> 12 ) + (j >> 3)], mmap[i].type);
             // }
         }
-        // printf("|%x|", mmap[i].entry_base);
-        // printf("%x",  mmap[i].entry_length);
-        // printf("|%d   |\n", mmap[i].type);
+        printf("|%x|", mmap[i].entry_base);
+        printf("%x",  mmap[i].entry_length);
+        printf("|%d   |\n", mmap[i].type);
     }
     for(uint32_t i = 0; i < 512; i++){
         pm_reserve(i * 4096);
@@ -76,23 +78,25 @@ void map(void *vaddr, void *paddr, uint32_t flags){
     uint32_t *pd = (uint32_t*)0xfffff000;
     if(!pd[pd_index]){
         pd[pd_index] = pm_alloc() | 1;
+        // printf("allocating %x\n", pd[pd_index]);
         asm volatile("invlpg (%0)" : : "b"(0xffc00000 + (pd_index * 0x400)) : "memory");
-        uint32_t *pt = (uint32_t *)(0xffc00000 + (pd_index * 0x400));
+        uint32_t *pt = (uint32_t *)(0xffc00000 + (pd_index * 0x1000));
         for(uint32_t i = 0; i < 0x400; i++)pt[i] = 0;
     }
-    uint32_t *pt = (uint32_t *)(0xffc00000 + (pd_index * 0x400));
+    uint32_t *pt = (uint32_t *)(0xffc00000 + (pd_index * 0x1000));
+    // printf("%x %x\n", vaddr, paddr);
     pt[pt_index] = (uint32_t)paddr | flags;
     asm volatile("invlpg (%0)  " : : "b"(vaddr) : "memory");
 }
 void unmap(void *vaddr){
     uint32_t pd_index = (uint32_t)vaddr >> 22;
     uint32_t pt_index = (uint32_t)vaddr >> 12 & 0x3ff;
-    
+    printf("unmap called");
     uint32_t *pd = (uint32_t *)0xfffff000;
     if(!pd[pd_index]){
         return;
     }
-    uint32_t *pt = (uint32_t *)(0xffc00000 + (pd_index * 0x400));
+    uint32_t *pt = (uint32_t *)(0xffc00000 + (pd_index * 0x1000));
     pt[pt_index] = 0;
     // uint32_t paddr = pt[pt_index];
     // paddr ^= (paddr & 0xfff);
@@ -103,17 +107,18 @@ void map_4mb(void *vaddr, void *paddr, uint32_t flags){
     //just wanted to get the prototype out
     //!TODO: Finish mapping and unmapping 4mb pages
 }
-uint32_t get_paddr(void *addr){
+uint32_t get_paddr(void *vaddr){
     //!TODO: Support 4mb pages
-    uint32_t vaddr = (uint32_t)addr;
-    uint32_t pd_index = vaddr >> 22;
-    uint32_t pt_index = vaddr >> 12 & 0x3ff;
+    
+    uint32_t pd_index = (uint32_t)vaddr >> 22;
+    uint32_t pt_index = (uint32_t)vaddr >> 12 & 0x3ff;
+    // printf("unmap called");
     uint32_t *pd = (uint32_t *)0xfffff000;
     if(!pd[pd_index]){
         return 0;
     }
-    uint32_t *pt = (uint32_t *)(0xffc00000 + (0x400 * pd_index));
-    return pt[pt_index] & ~(pt[pt_index] & 0xfff);
+    uint32_t *pt = (uint32_t *)(0xffc00000 + (pd_index * 0x1000));
+    return pt[pt_index];
 }
 uint32_t get_pflags(void *vaddr){
     uint32_t pd_index = (uint32_t)vaddr >> 22;
@@ -122,7 +127,7 @@ uint32_t get_pflags(void *vaddr){
     if(!pd[pd_index]){
         return 0;
     }
-    uint32_t *pt = (uint32_t *)(0xffc00000 + (0x400 * pd_index));
+    uint32_t *pt = (uint32_t *)(0xffc00000 + (0x1000 * pd_index));
     return (pt[pt_index] & 0xfff);
 }
 void *get_new_page(uint32_t flags){
@@ -134,11 +139,13 @@ void *get_new_page(uint32_t flags){
     map((void *)paddr+(i*4096), (void *)paddr, flags);
 }
 void *kmalloc(uint32_t size_pgs){
+    // static uint8_t fake = 0;
     uint32_t i = 1 << 10; //4mb/4096 (start search at 1mb line)
-    while(i < (1 << 20)){
+    while(i < (1 << 22)){
         uint8_t found = 1;
         for(uint32_t j = 0; j < size_pgs; j++){
-            if(get_paddr((void *)((i + j) << 12))){
+            // printf("found at %x, %x\n", (i + j) << 12, get_paddr((void*)((i + j) << 12)));
+            if(get_pflags((void *)((i + j) << 12))){
                 found = 0;
                 break;
             }
@@ -149,8 +156,14 @@ void *kmalloc(uint32_t size_pgs){
         }
         for(uint32_t j = 0; j < size_pgs; j++){
             uint32_t flags = PT_PRESENT | PT_SYS | (PT_LINK_L * (j != 0)) | (PT_LINK_N * (j < (size_pgs - 1)));
-            map((void *)((i + j)<<12), (void*)pm_alloc(), flags);
+            uint32_t physaddr = pm_alloc();
+            // if(j == 0) printf("%x", physaddr);
+            // printf("Mapping %x to %x\n", (i + j) << 12, physaddr);
+            // if(fake) return 0;
+            map((void *)((i + j) << 12), (void*)physaddr, flags);
         }
+        // fake = !fake;
+        // for(;;);
         return (void*)(i << 12);
     }
 }

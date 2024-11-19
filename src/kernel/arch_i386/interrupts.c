@@ -54,7 +54,11 @@ cpu_registers_t *_irq_handler(cpu_registers_t *regs){
     return regs;
 }
 void _isr_handler(cpu_registers_t *regs){
-    printf("Error!! %x\n", regs->eip);
+    printf("Kernel Panic!\n");
+    printf("ISR: %d\n", regs->int_no);
+    printf("EAX: %x EBX: %x ECX: %x EDX: %x\n", regs->eax, regs->ebx, regs->ecx, regs->edx);
+    printf("ESI: %x EDI: %x ESP: %x EBP: %x\n", regs->esi, regs->edi, regs->esp, regs->ebp);
+    printf("EIP: %x CS: %x DS: %x SS: %x\n", regs->eip, regs->cs, regs->ds, regs->ss);
     for(;;);
 }
 
