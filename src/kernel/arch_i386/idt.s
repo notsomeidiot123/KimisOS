@@ -351,6 +351,7 @@ _irq_common_stub:
     pop ds
     popad
     add esp, 8
+    ; sti
     iret
 
 global panic_hold
