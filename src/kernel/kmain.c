@@ -7,7 +7,7 @@
 #include "drivers/cpuio.h"
 #include "system/scheduler.h"
 
-void test(){
+void testf(){
     printf("Hello from thread!\n");
     // thread_exit(1);
     // enable_interrupts();
@@ -18,6 +18,7 @@ void test1(){
     // printf("Hello from thread1!\n");
     uint16_t *test = (void *)0xb8000;
     *test = 0x0f41;
+    thread_start(testf);
     for(;;);
     // asm 
 }
@@ -36,7 +37,7 @@ extern void kmain(kernel_info_t *kernel_info){
     uint32_t exit_code = -1;
     init_scheduler();
     thread_start(dead_proc);
-    thread_start(test);
+    thread_start(testf);
     thread_start(test1);
     enable_interrupts();
     for(;;);
