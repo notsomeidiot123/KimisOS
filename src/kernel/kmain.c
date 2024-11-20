@@ -7,21 +7,6 @@
 #include "drivers/cpuio.h"
 #include "system/scheduler.h"
 
-void testf(){
-    printf("Hello from thread!\n");
-    // thread_exit(1);
-    // enable_interrupts();
-    // asm volatile ("jmp .");
-    for(;;);
-}
-void test1(){
-    // printf("Hello from thread1!\n");
-    uint16_t *test = (void *)0xb8000;
-    *test = 0x0f41;
-    thread_start(testf);
-    for(;;);
-    // asm 
-}
 void dead_proc(){
     for(;;);
 }
@@ -34,11 +19,8 @@ extern void kmain(kernel_info_t *kernel_info){
     pic_setmask(0xfe, PIC1_DATA);
     //TODO: Map and load filesystem and disk modules
     //TODO: Start Initial Process
-    uint32_t exit_code = -1;
     init_scheduler();
     thread_start(dead_proc);
-    thread_start(testf);
-    thread_start(test1);
     enable_interrupts();
     for(;;);
     return;

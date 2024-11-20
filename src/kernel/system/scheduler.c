@@ -35,25 +35,16 @@ cpu_registers_t *schedule(cpu_registers_t *regs){
     // if(queue_length == 0){
     //     return regs;
     // }
-    uint32_t i = 0;
+    // uint32_t i = 0;
     processes[current_pid].cpuregs = *regs;
-    processes[process_queue[current_queue_index]].flags.ran = 1;
-    uint32_t run_count = 0;
-    for(uint32_t i = 0; i < queue_length; i++){
-        run_count += processes[process_queue[i]].flags.ran;
-    }
-    if(run_count == queue_length){
-        for(uint32_t i = 0; i < queue_length; i++){
-            processes[process_queue[i]].flags.ran = 0;
-        }
+    current_queue_index++;
+    if(current_queue_index >= queue_length){
         current_queue_index = 0;
     }
-    else{
-        current_queue_index++;
-    }
+    // current_pid = [current_queue_index]
     current_pid = process_queue[current_queue_index];
     asm volatile("mov %0, %%cr3" : : "r"(processes[current_pid].page_dir));
-
+    // printf("pid: %d, %d\n", run_count, queue_length);
     cpu_registers_t *newregs = (cpu_registers_t*)processes[current_pid].cpuregs.esp;
     // printf("EAX: %x EBX: %x ECX: %x EDX: %x\n", newregs->eax, newregs->ebx, newregs->ecx, newregs->edx);
     // printf("ESI: %x EDI: %x ESP: %x EBP: %x\n", newregs->esi, newregs->edi, newregs->esp, newregs->ebp);
@@ -81,6 +72,7 @@ void remove_process_queue(uint32_t pid){
     if(old_index == last_queue_index) return;
     process_queue[old_index] = process_queue[last_queue_index];
     process_queue[last_queue_index] = 0;
+    queue_length--;
 }
 
 uint32_t spawn_new_process(cpu_registers_t defaultregs, char **argv, uint32_t argc, void *cr3){
@@ -154,11 +146,17 @@ uint32_t thread_start(void (*function)()){
     return retpid;
 }
 void thread_join(uint32_t thread_id, uint32_t *exit_code){
-    while(processes[thread_id].flags.present);
+    asm volatile ("" : : :"memory");
+    while(processes[thread_id].flags.present){
+        // printf("%d", processes[thread_id].flags.present);
+    };
+    // printf("Done");
     *exit_code = processes[thread_id].exit_value;
 }
 void thread_exit(uint32_t exit_code){
     processes[current_pid].flags.present = 0;
     processes[current_pid].exit_value = exit_code;
     remove_process_queue(current_pid);
+    // printf("Exiting pid %d, %d\n", current_pid);
+    asm volatile ("int $32");//call scheduler via interrupt
 }
