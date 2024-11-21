@@ -7,7 +7,7 @@
 #include "drivers/cpuio.h"
 #include "system/scheduler.h"
 
-void dead_proc(){
+void pid0(){
     for(;;);
 }
 extern void kmain(kernel_info_t *kernel_info){
@@ -20,7 +20,7 @@ extern void kmain(kernel_info_t *kernel_info){
     //TODO: Map and load filesystem and disk modules
     //TODO: Start Initial Process
     init_scheduler();
-    thread_start(dead_proc);
+    thread_start(pid0);
     enable_interrupts();
     for(;;);
     return;
