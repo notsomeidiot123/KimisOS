@@ -19,6 +19,7 @@ extern void kmain(kernel_info_t *kernel_info){
     pic_setmask(0xfe, PIC1_DATA);
     //TODO: Map and load filesystem and disk modules
     //TODO: Start Initial Process
+    
     init_scheduler();
     thread_start(pid0);
     enable_interrupts();

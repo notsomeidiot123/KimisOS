@@ -2,13 +2,13 @@
 
 ## Basic Information
 
-Kimi's Bootloader is a custom booting solution and the default bootloader for Kimi's OS on legacy BIOS systems. It loads the default x86 GDT to be used by the Kernel.
+Kimi's Bootloader is a custom booting solution and the default bootloader for Kimi's OS on legacy BIOS systems. It loads the default x86 GDT to be used by the Kernel, and maps the kernel to any address as specified in it's ELF program header.
 
 The bootloader also sets the video mode to the closest mode present to Standard definition, and obtains the BIOS memory map to be passed to the Kernel. 
 
 ### Features
 
-It's not very feature rich, cause it's whole purpose was to do the bare minimum for what i needed for my own project. While I've made bootloaders before, they've typically only consisted of some code that gets a memory map, sets up a gdt, and says "fuck it, i'll load these next 64 sectors, why not?" however i wanted to do everything a bit better, make things easier on me in the long run, and now i have a bootloader that does the same thing but
+It's not very feature rich, cause it's whole purpose was to do the bare minimum for what i needed for my own project. While I've made bootloaders before, they've typically only consisted of some code that gets a memory map, sets up a gdt, and says "screw it, i'll load these next 64 sectors, why not?" however i wanted to do everything a bit better, make things easier on me in the long run, and now i have a bootloader that does the same thing but
 
 - searches and loads any file named "kernel.elf" into memory (only supports legacy filenames for now, LFNs to be supported at a later date
 
@@ -44,6 +44,8 @@ It's not very feature rich, cause it's whole purpose was to do the bare minimum 
 - Selecting better load/copy addresses
 
 	On loading the kernel file, I just pick some arbitrary, pre-chosen spot and say "yeah, this is good enough", but in reality i have on average only 400-ish kb until i start to overwrite the EBDA (which is bad, i do enjoy having ACPI). Instead, I want to implement a function to actually look for a continuous point in memory that is large enough to hold the entire kernel (ELF headers and all) without accidentally overwriting important information or running into memory barriers/holes.
+	
+	Edit (11/21/24) I actually added this a *while* ago, but never updated the docs cause I'm forgetful
 
 ### A20 Line
 
@@ -66,6 +68,7 @@ If all else fails, the bootloader will attempt to enable the a20 line by using t
 While any GDT loaded for the Kernel will work, once the Kernel wants to load user processes, it will fail to locate user segments in the GDT if the one loaded is not the one expected. Because of this, the Kernel will need to load it's own if the one it wants is not loaded by this bootloader. To allow for detection, the key "0xaa55" is written at the end of the GDT, marking the last segment invalid, but allowing for the detection of the correct GDT being pre-loaded. This detection will only occurr during boot time, and unexpected writes will cause the Kernel to crash.
 
 #### GDT Layout:
+
 |INDEX|ENTRY TYPE|
 |-----|----------|
 |0x00 |Null Entry|

@@ -306,6 +306,7 @@ part_2:
     ; debug
     mov edi, kernel_file
     call open_file
+    add edx, 0x40000;is 200 kb enough for a filesystem diver and a disk driver?
     call find_kpaddr
     ; debug
     mov esi, eax
@@ -317,6 +318,7 @@ part_2:
     ; debug
     mov esi, [kload_paddr]
     call load_elf
+    
     ; debug
     push eax
     cli
@@ -705,7 +707,9 @@ load_elf:
         je .map_next
         xor edx, edx
         shr ecx, 12
+        add dword [kload_paddr], 0x1000
         .mloop:
+            add dword [kload_paddr], 0x1000;
             call map_addr
             add edi, 0x1000
             add esi, 0x1000
@@ -768,7 +772,28 @@ map_addr:
     pop ebp
     ret
     jmp $
-
+map_pages_id:
+    ;edx = page count
+    ;eax = addr
+    push esi
+    push edi
+    push edx
+    cmp eax, 1 << 22
+    je .ret
+    mov esi, eax
+    .loop:
+        cmp edx, 0
+        je .ret
+        mov edi, esi
+        call map_addr
+        add esi, 0x1000
+        dec edx
+        jmp .loop
+    .ret:
+        pop edx
+        pop edi
+        pop esi
+        ret;
 ;kernel info
 k_info:
     .memory_map_ptr:    dd 0x2000
@@ -778,13 +803,16 @@ k_info:
     .xres:              dw 80
     .yres:              dw 25
     .framebuffer_ptr:   dd 0xb8000
-    .loaded_modules:    dd 0
-    .loaded_module_c:   dd 0
+    .loaded_modules:    dd disk_module_struct
 ;loaded_modules points to a struct array containing a ptr to the entry point of each pre-loaded module to be executed during startup
-;module_struct:
-    ;.entry_point: dd 0
-    ; cr3_load: dd 0
-    ;.type:  db 0
+disk_module_struct:
+    .ptr: dd 0
+    .type:  dd 1
+    .next_entry: dd fs_module_struct
+fs_module_struct:
+    .ptr: dd 0
+    .type: dd 2
+    .next_entry: dd 0
 kernel_file: db "kernel", 0x0, 0x0, "elf"
 loaded_fat_block: dd 0
 last_allocated_pgtb: dd 0x10000

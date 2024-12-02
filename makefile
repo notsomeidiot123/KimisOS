@@ -22,7 +22,8 @@ kernel:
 	sh c_build_helper.sh
 	nasm src/kernel/arch_i386/idt.s -o bin/kernel/idt.o -felf32
 	# ld -T linker.ld bin/kernel/entry.o bin/kernel/*.o -melf_i386
-	ld -T linker.ld bin/kernel/*.o -melf_i386
+	ld -T linker.ld bin/kernel/*.o -melf_i386 -o kernel.elf
+	ld -T linker.ld -o kernel_interface.elf -r -R kernel.elf -melf_i386
 # %.o: $(SRCS)
 # 	mkdir -p bin/kernel/$(shell dirname $@)
 # 	$(CC) $(CFLAGS) $< -o $@
