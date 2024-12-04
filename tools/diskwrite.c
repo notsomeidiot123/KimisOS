@@ -183,8 +183,13 @@ int create_file(char *path, fat_info *info, FILE *file){
     //searching for a free dirent
     file_t *root_dir = (file_t *)root_dir_buffer;
     uint32_t free_file_index = 0;
+    // printf("filename: %s\n", root_dir[free_file_index].filename);
+    for(uint32_t i = 0; i < 0x1000; i++){
+        printf("%2x ", root_dir_buffer[i]);
+    }
     while(root_dir[free_file_index].filename[0] && free_file_index < dirent_count){
         free_file_index++;
+        printf("\033[0;31mSearching for file, indexx %d\033[0m", free_file_index);
     }
     if(free_file_index >= dirent_count){
         //!FIXME
