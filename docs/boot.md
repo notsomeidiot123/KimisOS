@@ -87,3 +87,4 @@ While any GDT loaded for the Kernel will work, once the Kernel wants to load use
 |2|Failed to read from disk|
 |3|Corrupted/Invalid ELF formatted file|
 |4|Failed to find suitable location in memory for kernel|
+|5|Failed to locate kernel file|

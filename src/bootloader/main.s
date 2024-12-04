@@ -306,7 +306,9 @@ part_2:
     ; debug
     mov edi, kernel_file
     call open_file
-    add edx, 0x40000;is 200 kb enough for a filesystem diver and a disk driver?
+    cmp eax, -1
+    je file_not_found
+    add edx, 0x40000;is 1mb enough for a filesystem diver and a disk driver?
     call find_kpaddr
     ; debug
     mov esi, eax
@@ -318,9 +320,46 @@ part_2:
     ; debug
     mov esi, [kload_paddr]
     call load_elf
-    
-    ; debug
     push eax
+    
+    mov edi, disk_module_file
+    call open_file
+    cmp eax, -1
+    je .find_fs_driver_no_disk
+    mov eax, esi
+    and edx, 0xfffffc00
+    add edx, 0x1000
+    add [kload_paddr], edx
+    
+    mov edi, edx
+    mov [disk_module_struct.ptr], edi
+    call read_file
+    
+    jc load_fail
+    .find_fs_driver_no_disk:
+        mov ax, 0xe41
+        int 0x10
+    .find_fs_driver:
+        mov edi, fs_module_file
+        call open_file
+        cmp eax, -1
+        je .start32_no_fs
+        mov eax, esi
+        and edx, 0xfffffc00
+        add edx, 0x1000
+        add [kload_paddr], edx
+        
+        mov edi, edx
+        mov [fs_module_struct.ptr], edi
+        call read_file
+        
+        jc load_fail
+    .start32_no_fs:
+        mov ax, 0xe42
+        int 0x10
+    .start32:
+    ; debug
+    ; push eax
     cli
     mov eax, page_table
     mov cr3, eax
@@ -346,6 +385,12 @@ protected_mode:
         jmp eax
     jmp $
 bits 16
+file_not_found:
+    mov ah, 0xe
+    mov al, 'E'
+    int 0x10
+    mov al, '5'
+    int 0x10
 load_kernel:
 get_mmap:
     pushad
@@ -813,7 +858,9 @@ fs_module_struct:
     .ptr: dd 0
     .type: dd 2
     .next_entry: dd 0
-kernel_file: db "kernel", 0x0, 0x0, "elf"
+kernel_file: db "kernel", 0, 0, "elf"
+disk_module_file: db "idm", 0, 0, 0, 0, 0, "elf"
+fs_module_file: db "ifsm", 0, 0, 0, 0, "elf"
 loaded_fat_block: dd 0
 last_allocated_pgtb: dd 0x10000
 sacrifice1: dd 0
