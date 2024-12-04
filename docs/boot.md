@@ -79,6 +79,9 @@ While any GDT loaded for the Kernel will work, once the Kernel wants to load use
 |0x28 |User Data (32)  |
 |0x30 |TSS			   |
 
+### Module Loading
+	At boot time, only two mucles are loaded. One for the disk driver, and one for the file system driver. These modules must be located in the files `/idm.elf` and `ifsm.elf`, respectively. When loaded, these modules are simply the raw data straight from the file, and the ELF header must be parsed and the segments loaded properly by the kernel itself.
+
 ### Error Codes
 
 |Error Code|Description|
