@@ -8,8 +8,8 @@ OBJS := $(patsubst src/kernel/%.c, bin/kernel/%.o, $(SRCS))
 all: bootloader tools kernel
 	cp bin/bootloader.bin image.bin
 	qemu-img resize -f raw image.bin 512M
-	./diskwrite -v kernel.elf -o image.bin
-	./diskwrite -v idm.elf -o image.bin
+	./diskwrite -v kernel.elf idm.elf -o image.bin
+	# ./diskwrite -v idm.elf -o image.bin
 	qemu-system-i386 -hda image.bin --no-reboot --no-shutdown -m 32m -smp 2 -serial mon:stdio -D intlog.txt -d int
 tools:
 	$(CC) tools/diskwrite.c -o diskwrite

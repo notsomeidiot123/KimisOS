@@ -83,6 +83,7 @@ int verbose = 0;
 
 int read_sector(FILE *file, uint32_t sector_start, uint32_t count, buffer_t buf){
     verbose && printf("Attempting to read bytes 0x%x - 0x%x\n", sector_start * 512, sector_start * 512  + count * 512);
+    // rewind(file);
     int result = fseek(file, sector_start * 512, SEEK_SET);
     if(result){
         return result;
@@ -95,6 +96,7 @@ int read_sector(FILE *file, uint32_t sector_start, uint32_t count, buffer_t buf)
 
 int write_sector(FILE *file, uint32_t sector_start, uint32_t count, buffer_t buf){
     // printf("pre seek\n");
+    // rewind(file);
     int result = fseek(file, sector_start * 512, SEEK_SET);
     if(result){
         printf("Error during seek\n");
@@ -106,7 +108,7 @@ int write_sector(FILE *file, uint32_t sector_start, uint32_t count, buffer_t buf
 }
 
 uint32_t find_free_cluster(fat_info *info){
-    // printf("finding free cluster\n");
+    verbose && printf("finding free cluster\n");
     uint32_t start = info->fsinfo.cluster_search_start;
     if(start < 2){
         start = 2;
@@ -125,118 +127,44 @@ void write_cluster_value(fat_info *info, uint32_t value, uint32_t cluster){
     }
 }
 
-int read_file(fat_info *info, uint32_t first_cluster, file_t *file, buffer_t *buffer, FILE *disk);
+int read_file(fat_info *info, file_t *file, buffer_t *buffer, size_t size, FILE *disk){
+    if(!file){
+        uint32_t first_cluster = info->bpb.root_dir_cluster;
+        uint32_t next_cluster = first_cluster;
+        // while
+        return 1;
+    }
+    uint32_t first_cluster = file->start_cluster_low | (file->start_cluster_high << 16);
+    uint32_t clusters  = (size / (info->bpb.bytes_per_sector * info->bpb.sectors_per_cluster )) + 1;
+    uint8_t *new_buffer = calloc(1, clusters * (info->bpb.bytes_per_sector * info->bpb.sectors_per_cluster));
+    
+}
+//write size bytes to file from buffer. no value may be zero or null.
+int write_file(fat_info *info, file_t *file, buffer_t *buffer, size_t size, FILE *disk){
+    if(!file){
+        return 1;
+    }
+    uint32_t first_cluster = file->start_cluster_low | (file->start_cluster_high << 16);
+    uint32_t clusters  = (size / (info->bpb.bytes_per_sector * info->bpb.sectors_per_cluster )) + 1;
+    uint8_t *new_buffer = calloc(1, clusters * (info->bpb.bytes_per_sector * info->bpb.sectors_per_cluster ));
+    memcpy(new_buffer, buffer, size);
+    uint32_t cluster = first_cluster;
+    for(uint32_t i = 0; i < clusters; i++){
+        write_sector(disk, info->bpb.reserved_sectors + info->bpb.partition_start + (cluster * info->bpb.sectors_per_cluster), info->bpb.sectors_per_cluster, new_buffer + i * info->bpb.sectors_per_cluster * info->bpb.bytes_per_sector);
+        uint32_t next_cluster = info->file_table[cluster];
+        if(next_cluster == -1){
+            next_cluster = find_free_cluster(info);
+            write_cluster_value(info, next_cluster, cluster);
+        }
+        cluster = next_cluster;
+    }
+    write_cluster_value(info, -1, cluster);
+    return size * info->bpb.bytes_per_sector * info->bpb.sectors_per_cluster;
+}
 
 int create_file(char *path, fat_info *info, FILE *file){
-    FILE *ifile = fopen(path, "r");
-    if(!ifile){
-        printf("Failed to open file: %s\nAborting...\n", path);
-        exit(-1);
-    }
-    fseek(ifile, 0, SEEK_END);
-    int ifsize = ftell(ifile);
-    if(ifsize == 0){
-        verbose && printf("File has length of 0, skipping %s\n", path);
-        return 0;
-    }
-    buffer_t ifile_data = malloc((ifsize/(info->bpb.bytes_per_sector * info->bpb.sectors_per_cluster) + 1) * info->bpb.bytes_per_sector * info->bpb.sectors_per_cluster);
-    rewind(ifile);
-    if(!fread(ifile_data, 1, ifsize, ifile)){
-        verbose && printf("Failed to read from file %s, skippping\n", path);
-        return 0;
-    }
-    verbose && printf("Read %d bytes from ifile\n", ifsize);
-    //create file in root dir
-    file_t dirent = {0};
-    int extoffset = 0;
-    while(*(path + extoffset) != '.' && *(path + extoffset)){
-        extoffset++;
-    }
-    memcpy(dirent.filename, path, 8 > extoffset ? extoffset : 8);
-    verbose && printf("File extension at %d\n", extoffset);
-    verbose && printf("file ext: %s\n", path + extoffset);
-    memmove(dirent.ext, path + extoffset + 1, 3);
-    dirent.size_bytes = ifsize;
-    verbose && printf("Writing %u clusters\n", ifsize/(info->bpb.bytes_per_sector * info->bpb.sectors_per_cluster) + 1);
-    uint32_t last_cluster = 0;
-    for(int i = 0; i <= ifsize/(info->bpb.bytes_per_sector * info->bpb.sectors_per_cluster); i++){
-        uint32_t cluster = find_free_cluster(info);
-        if(i == 0){
-            dirent.start_cluster_high = cluster >> 16;
-            dirent.start_cluster_low = cluster & 0xFFFF;
-        }
-        // printf("found free cluster\n");
-        write_sector(file, (info->bpb.reserved_sectors + info->bpb.fat_count * info->bpb.sectors_per_fat) + cluster * info->bpb.sectors_per_cluster, info->bpb.sectors_per_cluster, ifile_data + (info->bpb.bytes_per_sector * info->bpb.sectors_per_cluster) * i);
-        printf("cluster %d @ %p\n", i, ifile_data + (info->bpb.bytes_per_sector * info->bpb.sectors_per_fat * info->bpb.sectors_per_cluster) * i);
-        
-        verbose && printf("wrote to sector %x %x sectors of data from buffer\n", (info->bpb.reserved_sectors + info->bpb.fat_count * info->bpb.sectors_per_fat) + cluster * info->bpb.sectors_per_cluster, info->bpb.sectors_per_cluster);
-        if(last_cluster != 0) write_cluster_value(info, cluster, last_cluster);
-        write_cluster_value(info, FILE_END, cluster);
-        last_cluster = cluster;
-    }
-    verbose && printf("last cluster: %d\n", last_cluster);
-    // write_cluster_value(info, FILE_END, last_cluster);
     
-    buffer_t root_dir_buffer = 0;
-    uint32_t dirent_count = read_file(info, info->bpb.root_dir_cluster, 0, &root_dir_buffer, file)/sizeof(file_t);
-    
-    //searching for a free dirent
-    file_t *root_dir = (file_t *)root_dir_buffer;
-    uint32_t free_file_index = 0;
-    // printf("filename: %s\n", root_dir[free_file_index].filename);
-    for(uint32_t i = 0; i < 0x1000; i++){
-        printf("%2x ", root_dir_buffer[i]);
-    }
-    while(root_dir[free_file_index].filename[0] && free_file_index < dirent_count){
-        free_file_index++;
-        printf("\033[0;31mSearching for file, indexx %d\033[0m", free_file_index);
-    }
-    if(free_file_index >= dirent_count){
-        //!FIXME
-        verbose && printf("could not find free dirent; this will be fixed in a later version\n");
-        exit(-1);
-    }
-    root_dir[free_file_index] = dirent;
-    verbose && printf("Found a free dirent at index %u\n", free_file_index);
-    uint32_t cluster = info->bpb.root_dir_cluster;
-    uint32_t cluster_count = (dirent_count * sizeof(file_t)) / info->bpb.bytes_per_sector /info->bpb.sectors_per_cluster;
-    for(uint32_t i = 0; i < cluster_count; i++){
-        write_sector(file, (info->bpb.reserved_sectors + (info->bpb.fat_count * info->bpb.sectors_per_fat) + cluster * info->bpb.sectors_per_cluster), info->bpb.sectors_per_cluster, (buffer_t)(root_dir + i * info->bpb.sectors_per_cluster * info->bpb.bytes_per_sector));
-        uint32_t lcluster = cluster;
-        cluster = info->file_table[cluster];
-        if(cluster == FILE_END && i < cluster_count - 1){
-            cluster = find_free_cluster(info);
-            if(cluster != FILE_END){
-                write_cluster_value(info, cluster, lcluster);
-                write_cluster_value(info, cluster, FILE_END);
-            }
-        }
-    }
 }
-
-int read_file(fat_info *info, uint32_t first_cluster, file_t *file, buffer_t *buffer, FILE *disk){
-    uint32_t cluster_size_bytes = info->bpb.bytes_per_sector * info->bpb.sectors_per_cluster;
-    if(file == 0){
-        verbose && printf("Reading starting from cluster %d\n", first_cluster);
-        buffer_t buf = malloc(1);
-        uint32_t allocated = 0;
-        uint32_t cluster = first_cluster;
-        do {
-            allocated++;
-            buf = realloc(buf, cluster_size_bytes * allocated);
-            verbose && printf("Reallocated to %u, ptr: %p\n", allocated * cluster_size_bytes, buf);
-            read_sector(disk, info->bpb.reserved_sectors + (info->bpb.fat_count * info->bpb.sectors_per_fat) + cluster * info->bpb.sectors_per_cluster, info->bpb.sectors_per_cluster, buf + (allocated * cluster_size_bytes));
-            cluster = info->file_table[cluster];
-        }while(cluster != FILE_END);
-        if(*buffer != 0){
-            free(buffer);
-        }
-        verbose && printf("Read %d cluster starting from cluster %d\n", allocated, first_cluster);
-        *buffer = buf;
-        return allocated * cluster_size_bytes;
-    }
-}
-
 
 int fat_write_back(FILE *file, fat_info *info){
     int res = 0;
@@ -246,22 +174,25 @@ int fat_write_back(FILE *file, fat_info *info){
 }
 
 int detect_repair_fs(FILE *file, fat_info *info){
+    //perform sanity checks and set data if wrong
     buffer_t boot_sector = malloc(512);
     read_sector(file, 0, 1, boot_sector);
-    memcpy(&(info->bpb), boot_sector, 90);
-    buffer_t fat = malloc(info->bpb.sectors_per_fat * info->bpb.fat_count * info->bpb.bytes_per_sector);
-    verbose && printf("allocated 0x%x bytes for fat\n", (info->bpb.sectors_per_fat * info->bpb.fat_count * info->bpb.bytes_per_sector));
-    int result = read_sector(file, info->bpb.reserved_sectors, info->bpb.fat_count * info->bpb.sectors_per_fat, fat);
-    if(result == 0){
-        printf("Error: Could not read from disk %p\n", file);
-        return 1;
-    }
-    info->file_table = (uint32_t *)fat;
-    verbose && printf("FAT assigned\n");
-    if(!info->file_table[info->bpb.root_dir_cluster]){
-        verbose && printf("Root directory not assigned, assigning cluster at cluster %d\n", info->bpb.root_dir_cluster);
-        write_cluster_value(info, FILE_END, info->bpb.root_dir_cluster);
-    }
+    info->bpb = *(fat_bpb_t *)boot_sector;
+    verbose && printf("\033[0;33mBytes per sector: %d\n", info->bpb.bytes_per_sector);
+    verbose && printf("Sectors per cluster: %x\n", info->bpb.sectors_per_cluster);
+    info->bpb.bytes_per_sector += 512 * info->bpb.bytes_per_sector == 0;
+    info->bpb.sectors_per_cluster += 8 * info->bpb.sectors_per_cluster == 0;
+    verbose && printf("Reserved sectors %d\n", info->bpb.reserved_sectors);
+    info->bpb.reserved_sectors += 32 * info->bpb.reserved_sectors == 0;
+    verbose && printf("Root directory cluster: %d\n", info->bpb.root_dir_cluster);
+    info->bpb.root_dir_cluster += 2 * info->bpb.root_dir_cluster == 0;
+    memcpy(boot_sector, &info->bpb, sizeof(fat_bpb_t));
+    write_sector(file, 0, 1, boot_sector);
+    
+
+    verbose && printf("\033[1;31mAllocating File Table: 0x%x bytes\033[0m\n",  info->bpb.sectors_per_fat * info->bpb.fat_count * info->bpb.bytes_per_sector);
+    info->file_table = malloc(info->bpb.sectors_per_fat * info->bpb.fat_count * info->bpb.bytes_per_sector);
+    read_sector(file, info->bpb.reserved_sectors, info->bpb.sectors_per_fat * info->bpb.fat_count, (buffer_t)info->file_table);
 }
 
 int main(int argc, char **argv){
@@ -301,6 +232,7 @@ int main(int argc, char **argv){
     }
     detect_repair_fs(output_file, &info);
     for(int i = 0; i < filec; i++){
+        printf("\033[1;34mWriting file %d in list: %s\033[0m\n", i, files[i]);
         create_file(files[i], &info, output_file);
     }
     fat_write_back(output_file, &info);
