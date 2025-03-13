@@ -126,23 +126,36 @@ void write_cluster_value(fat_info *info, uint32_t value, uint32_t cluster){
         info->file_table[cluster + i * info->bpb.sectors_per_fat * (info->bpb.bytes_per_sector/4)] = value;
     }
 }
-
+//read size bytes into buffer. If file is null, will read from root directory.
 int read_file(fat_info *info, file_t *file, buffer_t *buffer, size_t size, FILE *disk){
     if(!file){
-        uint32_t first_cluster = info->bpb.root_dir_cluster;
-        uint32_t next_cluster = first_cluster;
-        // while
-        return 1;
+        file_t root_file = {0};
+        root_file.start_cluster_high = info->bpb.root_dir_cluster>>16;
+        root_file.start_cluster_low = info->bpb.root_dir_cluster&0xffff;
+        file = &root_file;
     }
     uint32_t first_cluster = file->start_cluster_low | (file->start_cluster_high << 16);
     uint32_t clusters  = (size / (info->bpb.bytes_per_sector * info->bpb.sectors_per_cluster )) + 1;
     uint8_t *new_buffer = calloc(1, clusters * (info->bpb.bytes_per_sector * info->bpb.sectors_per_cluster));
-    
+    uint32_t cluster = first_cluster;
+    for(uint32_t i = 0; i < clusters; i++){
+        if(cluster = -1){
+            return i * info->bpb.bytes_per_sector * info->bpb.sectors_per_cluster;
+        }
+        printf("Reading cluster: %d", cluster);
+        read_sector(disk, info->bpb.reserved_sectors + info->bpb.partition_start + (cluster * info->bpb.sectors_per_cluster), info->bpb.sectors_per_cluster, buffer + (i *info->bpb.bytes_per_sector * info->bpb.sectors_per_cluster));
+        cluster = info->file_table[cluster];
+        verbose && printf("Next cluster: %d", cluster);
+    }
 }
-//write size bytes to file from buffer. no value may be zero or null.
+
+//write size bytes to file from buffer. no value may be zero or null. If file is null, will write to root directory
 int write_file(fat_info *info, file_t *file, buffer_t *buffer, size_t size, FILE *disk){
     if(!file){
-        return 1;
+        file_t root_file = {0};
+        root_file.start_cluster_high = info->bpb.root_dir_cluster>>16;
+        root_file.start_cluster_low = info->bpb.root_dir_cluster&0xffff;
+        file = &root_file;
     }
     uint32_t first_cluster = file->start_cluster_low | (file->start_cluster_high << 16);
     uint32_t clusters  = (size / (info->bpb.bytes_per_sector * info->bpb.sectors_per_cluster )) + 1;
@@ -163,7 +176,7 @@ int write_file(fat_info *info, file_t *file, buffer_t *buffer, size_t size, FILE
 }
 
 int create_file(char *path, fat_info *info, FILE *file){
-    
+    file_t *file_desc_buffer = calloc(info->bpb.root_dir_entries, sizeof(file_t));
 }
 
 int fat_write_back(FILE *file, fat_info *info){
