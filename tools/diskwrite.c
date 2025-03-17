@@ -127,7 +127,7 @@ void write_cluster_value(fat_info *info, uint32_t value, uint32_t cluster){
     }
 }
 //read size bytes into buffer. If file is null, will read from root directory.
-int read_file(fat_info *info, file_t *file, buffer_t *buffer, size_t size, FILE *disk){
+int read_file(fat_info *info, file_t *file, buffer_t buffer, size_t size, FILE *disk){
     if(!file){
         file_t root_file = {0};
         root_file.start_cluster_high = info->bpb.root_dir_cluster>>16;
@@ -142,15 +142,15 @@ int read_file(fat_info *info, file_t *file, buffer_t *buffer, size_t size, FILE 
         if(cluster = -1){
             return i * info->bpb.bytes_per_sector * info->bpb.sectors_per_cluster;
         }
-        printf("Reading cluster: %d", cluster);
+        printf("Reading cluster: %d\n", cluster);
         read_sector(disk, info->bpb.reserved_sectors + info->bpb.partition_start + (cluster * info->bpb.sectors_per_cluster), info->bpb.sectors_per_cluster, buffer + (i *info->bpb.bytes_per_sector * info->bpb.sectors_per_cluster));
         cluster = info->file_table[cluster];
-        verbose && printf("Next cluster: %d", cluster);
+        verbose && printf("Next cluster: %d\n", cluster);
     }
 }
 
 //write size bytes to file from buffer. no value may be zero or null. If file is null, will write to root directory
-int write_file(fat_info *info, file_t *file, buffer_t *buffer, size_t size, FILE *disk){
+int write_file(fat_info *info, file_t *file, buffer_t buffer, size_t size, FILE *disk){
     if(!file){
         file_t root_file = {0};
         root_file.start_cluster_high = info->bpb.root_dir_cluster>>16;
@@ -175,8 +175,22 @@ int write_file(fat_info *info, file_t *file, buffer_t *buffer, size_t size, FILE
     return size * info->bpb.bytes_per_sector * info->bpb.sectors_per_cluster;
 }
 
-int create_file(char *path, fat_info *info, FILE *file){
-    file_t *file_desc_buffer = calloc(info->bpb.root_dir_entries, sizeof(file_t));
+int create_file(char *path, fat_info *info, FILE *file, FILE *disk){
+    file_t *root_files = calloc(info->bpb.root_dir_entries, sizeof(file_t));
+    read_file(info, 0, (buffer_t)root_files, (uint32_t)-1, disk);
+    uint32_t index = 0;
+    while(root_files[index].filename[0]) index++;
+    verbose && printf("Creating file at index: %d\n", index);
+    char *ext = strchr(path, '.');
+    char *tmpptr = path;
+    int nidx = 0;
+    while(tmpptr < ext){
+        root_files[index].filename[nidx++] = *(tmpptr++);
+    }
+    for(int i = 1; i < 4 && ext[i]; i++){
+        root_files[index].ext[i-1] = ext[i];
+    }
+    
 }
 
 int fat_write_back(FILE *file, fat_info *info){
@@ -246,7 +260,7 @@ int main(int argc, char **argv){
     detect_repair_fs(output_file, &info);
     for(int i = 0; i < filec; i++){
         printf("\033[1;34mWriting file %d in list: %s\033[0m\n", i, files[i]);
-        create_file(files[i], &info, output_file);
+        create_file(files[i], &info, output_file, output_file);
     }
     fat_write_back(output_file, &info);
     verbose && printf("Finished. Exiting...\n");
