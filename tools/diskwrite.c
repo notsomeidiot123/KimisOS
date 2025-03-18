@@ -58,13 +58,6 @@ typedef struct{
 }fsinfo_t;
 
 typedef struct{
-    fat_bpb_t bpb;
-    fsinfo_t fsinfo;
-    uint32_t *file_table;
-    uint32_t file_table_size_sectors;
-}fat_info;
-
-typedef struct{
     char filename[8];
     char ext[3];
     uint8_t attributes;
@@ -79,6 +72,14 @@ typedef struct{
     uint16_t start_cluster_low;
     uint32_t size_bytes;
 }__attribute__((packed)) file_t;
+
+typedef struct{
+    fat_bpb_t bpb;
+    fsinfo_t fsinfo;
+    uint32_t *file_table;
+    uint32_t file_table_size_sectors;
+    file_t *root_dir;
+}fat_info;
 
 int verbose = 0;
 
@@ -128,28 +129,12 @@ void write_cluster_value(fat_info *info, uint32_t value, uint32_t cluster){
         info->file_table[cluster + i * info->bpb.sectors_per_fat * (info->bpb.bytes_per_sector/4)] = value;
     }
 }
-//read size bytes into buffer. If file is null, will read from root directory.
-int read_file(fat_info *info, file_t *file, buffer_t buffer, size_t size, FILE *disk){
-    if(!file){
-        file_t root_file = {0};
-        root_file.start_cluster_high = info->bpb.root_dir_cluster>>16;
-        root_file.start_cluster_low = info->bpb.root_dir_cluster&0xffff;
-        file = &root_file;
-    }
-    uint32_t first_cluster = file->start_cluster_low | (file->start_cluster_high << 16);
-    uint32_t clusters  = (size / (info->bpb.bytes_per_sector * info->bpb.sectors_per_cluster )) + 1;
-    uint8_t *new_buffer = calloc(1, clusters * (info->bpb.bytes_per_sector * info->bpb.sectors_per_cluster));
-    uint32_t cluster = first_cluster;
-    for(uint32_t i = 0; i < clusters; i++){
-        if(cluster = -1){
-            return i * info->bpb.bytes_per_sector * info->bpb.sectors_per_cluster;
-        }
-        printf("Reading cluster: %d\n", cluster);
-        read_sector(disk, info->bpb.reserved_sectors + info->file_table_size_sectors + info->bpb.partition_start + (cluster * info->bpb.sectors_per_cluster), info->bpb.sectors_per_cluster, new_buffer + (i *info->bpb.bytes_per_sector * info->bpb.sectors_per_cluster));
-        cluster = info->file_table[cluster];
-        verbose && printf("Next cluster: %d\n", cluster);
-    }
-    memcpy(buffer, new_buffer, size);
+//read cluster - returns next cluster in chain
+uint32_t read_cluster(fat_info *info, uint32_t cluster, buffer_t buffer, size_t size, FILE *disk){
+    // uint8_t *new_buffer = calloc(4096, 1 * (info->bpb.bytes_per_sector * info->bpb.sectors_per_cluster));
+    read_sector(disk, info->bpb.reserved_sectors + info->file_table_size_sectors + info->bpb.partition_start + (cluster * info->bpb.sectors_per_cluster), info->bpb.sectors_per_cluster, buffer);
+    // memcpy(buffer, new_buffer, size);
+    return info->file_table[cluster];
 }
 
 //write size bytes to file from buffer. no value may be zero or null. If file is null, will write to root directory
@@ -185,7 +170,8 @@ int write_file(fat_info *info, file_t *file, buffer_t buffer, size_t size, FILE 
 
 int create_file(char *path, fat_info *info, FILE *file, FILE *disk){
     file_t *root_files = calloc(4096, sizeof(file_t));
-    read_file(info, 0, (buffer_t)root_files, (uint32_t)4096, disk);
+    // read_file(info, 0, (buffer_t)root_files, (uint32_t)4096, disk);
+    read_cluster(info, info->bpb.root_dir_cluster, (buffer_t)root_files, 4096, disk);
     uint32_t index = 0;
     while(root_files[index].filename[0]){
         index++;
@@ -250,6 +236,7 @@ int detect_repair_fs(FILE *file, fat_info *info){
 }
 
 int main(int argc, char **argv){
+    char list_root_dir = 0;
     char **files = malloc(512);
     int filec = 0;
     FILE *output_file = 0;
@@ -264,6 +251,10 @@ int main(int argc, char **argv){
         printf("-v: Verbose\n");
     }
     for(int i = 1; i < argc; i++){
+        if(!strcmp(argv[i], "-l")){
+            list_root_dir = 1;
+            continue;
+        }
         if(!strcmp(argv[i], "-o")){
             i++;
             if(i >= argc){
@@ -295,6 +286,17 @@ int main(int argc, char **argv){
         }
         create_file(files[i], &info, f, output_file);
         fclose(f);
+    }
+    if(list_root_dir){
+        buffer_t buf = calloc(4096, 1);
+        read_cluster(&info, 2, buf, 4096, output_file);
+        file_t *root = (void *)buf;
+        uint32_t index = 0;
+        while(root[index].filename[0]){
+            printf("%s", root[index].filename);
+            printf(".%s\n", root[index].ext);
+            index++;
+        }
     }
     fat_write_back(output_file, &info);
     verbose && printf("Finished. Exiting...\n");

@@ -337,7 +337,7 @@ part_2:
     
     jc load_fail
     .find_fs_driver_no_disk:
-        mov ax, 0xe41
+        mov ax, 0xe44
         int 0x10
     .find_fs_driver:
         mov edi, fs_module_file
@@ -355,7 +355,7 @@ part_2:
         
         jc load_fail
     .start32_no_fs:
-        mov ax, 0xe42
+        mov ax, 0xe46
         int 0x10
     .start32:
     ; debug
