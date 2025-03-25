@@ -461,8 +461,8 @@ open_file:
     ;esi = ptr to load file
     ;eax = return value (first cluster)
     ;edx = return value (file size)
-    ; push esi
-    ;!TODO: return file size in edx
+    ;!TODO: RE-WRITE FUNCTION FROM GROUND UP
+    push edi
     xor esi, esi
     xor ecx, ecx
     xor edx, edx
@@ -470,62 +470,35 @@ open_file:
     add si, [fat_bpb.reserved_sectors]
     mov cl, [fat_bpb.fat_count]
     mov dx, [fat_ebpb32.sectors_per_fat]
-    .addlp:
-        add esi, edx
-        dec ecx
-        or ecx, ecx
-        jnz .addlp
+    
+    mov ax, dx
     xor dx, dx
-    mov ecx, [fat_ebpb32.root_dir_cluster]
-    mov dl, [fat_bpb.sectors_per_cluster]
-    .addlp1:
-        add esi, edx
-        dec ecx
-        or ecx, ecx
-        jnz .addlp1
+    mul cx
+    add si, ax
+    
+    mov byte [DAP.segment], 0
     mov [DAP.sector_start], esi
-    mov [DAP.read_count],   dx
-    ; pop esi
-    mov [DAP.offset],       word 0x1000
-    mov [DAP.segment],      word 0x0000
+    mov word [DAP.read_count], 8
+    mov word [DAP.offset], root_dir
     
-    mov dx, [DAP.read_count]
-    push 0
-    pop ds
-    push 0
-    pop es
-    
-    mov ah, 0x42
-    mov dl, byte [data.boot_disc]
     mov si, DAP
+    mov ah, 0x42
+    mov dl, [data.boot_disc]
     int 0x13
-    jc load_fail
-    ; debug
+    jc .not_found_ret
     xor ecx, ecx
-    ; pop edi
+    lea esi, [root_dir - 0x20]
     .chklp:
-        lea esi, [ecx + root_dir]
-        cmp byte [si], 0
-        je .not_found_ret
-        repe cmpsb
-        mov ax, [si]
-        cmp ax, [di]
-        jne .not_found
-        lea esi, [ecx + root_dir]
-        
-        xor eax, eax
-        xor edx, edx
-        mov ax, [esi + 20]
-        shl eax, 16
-        mov ax, [esi + 26]
-        mov edx,[esi + 28]
-        ; debug
-        ret
-        
-    .not_found:
-        add ecx, 32
-        jmp .chklp
+        add esi, 0x20
+        mov edi, [esp]
+        mov ecx, 11
+        rep cmpsb
+        jne .chklp
+    .found:
+        debug
+    
     .not_found_ret:
+        pop edi
         mov eax, -1
         ret
     jmp $
