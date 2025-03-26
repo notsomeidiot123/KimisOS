@@ -306,6 +306,7 @@ part_2:
     ; debug
     mov edi, kernel_file
     call open_file
+    ; debug
     cmp eax, -1
     je file_not_found
     add edx, 0x40000;is 1mb enough for a filesystem diver and a disk driver?
@@ -320,21 +321,25 @@ part_2:
     ; debug
     mov esi, [kload_paddr]
     call load_elf
+    ; debug
     push eax
     
     mov edi, disk_module_file
     call open_file
+    ; debug
     cmp eax, -1
     je .find_fs_driver_no_disk
     mov eax, esi
     and edx, 0xfffffc00
     add edx, 0x1000
     add [kload_paddr], edx
+    ; debug
     
-    mov edi, edx
+    ; mov edi, edx
+    debug
     mov [disk_module_struct.ptr], edi
     call read_file
-    
+    debug
     jc load_fail
     .find_fs_driver_no_disk:
         mov ax, 0xe44
@@ -458,10 +463,9 @@ paging_en:
 open_file:
     ;only looks in the root directory
     ;edi = file_to_search
-    ;esi = ptr to load file
+    ;esi = ptr to load file [TODO: IMPLEMENT]
     ;eax = return value (first cluster)
     ;edx = return value (file size)
-    ;!TODO: RE-WRITE FUNCTION FROM GROUND UP
     push edi
     xor esi, esi
     xor ecx, ecx
@@ -475,7 +479,12 @@ open_file:
     xor dx, dx
     mul cx
     add si, ax
-    
+    xor cx, cx
+    mov ax, [fat_ebpb32.root_dir_cluster]
+    mov cl, [fat_bpb.sectors_per_cluster]
+    mul cx
+    add si, ax
+    ; jmp $
     mov byte [DAP.segment], 0
     mov [DAP.sector_start], esi
     mov word [DAP.read_count], 8
@@ -484,18 +493,37 @@ open_file:
     mov si, DAP
     mov ah, 0x42
     mov dl, [data.boot_disc]
+    ; jmp $
     int 0x13
     jc .not_found_ret
     xor ecx, ecx
-    lea esi, [root_dir - 0x20]
+    lea esi, [root_dir]
+    push word 0
+    pop es
     .chklp:
-        add esi, 0x20
+        ; add esi, 0x20
         mov edi, [esp]
+        cmp byte [esi], 0
+        mov ax, [esi]
+        je .not_found_ret
         mov ecx, 11
-        rep cmpsb
-        jne .chklp
+        push esi
+        repe cmpsb
+        pop esi
+        ; jmp $
+        je .found
+        add esi, 0x20
+        jmp .chklp
     .found:
-        debug
+        pop edi
+        ;eax = first cluster
+        ;edx = file size
+        mov ax, [esi + 20]
+        shl eax, 16
+        mov ax, [esi + 26]
+        mov edx, [esi + 28]
+        ; jmp $
+        ret
     
     .not_found_ret:
         pop edi
