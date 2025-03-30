@@ -320,6 +320,7 @@ part_2:
     jc load_fail
     ; debug
     mov esi, [kload_paddr]
+    ; jmp $
     call load_elf
     ; debug
     push eax
@@ -329,18 +330,20 @@ part_2:
     ; debug
     cmp eax, -1
     je .find_fs_driver_no_disk
-    mov eax, esi
+    mov esi, eax
     and edx, 0xfffffc00
     add edx, 0x1000
     add [kload_paddr], edx
     ; debug
     
-    ; mov edi, edx
-    debug
-    mov [disk_module_struct.ptr], edi
+    mov edi, [kload_paddr]
     call read_file
-    debug
+    mov esi, [kload_paddr]
+    ; call load_elf
+    mov [disk_module_struct.ptr], edi
+    ; debug
     jc load_fail
+    jmp .find_fs_driver
     .find_fs_driver_no_disk:
         mov ax, 0xe44
         int 0x10
