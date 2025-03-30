@@ -330,17 +330,18 @@ part_2:
     ; debug
     cmp eax, -1
     je .find_fs_driver_no_disk
+    mov [disk_module_struct.size], edx
     mov esi, eax
     and edx, 0xfffffc00
     add edx, 0x1000
     add [kload_paddr], edx
     ; debug
-    
     mov edi, [kload_paddr]
-    call read_file
-    mov esi, [kload_paddr]
-    ; call load_elf
     mov [disk_module_struct.ptr], edi
+    call read_file
+    jc load_fail
+    ; mov esi, [kload_paddr]
+    ; call load_elf
     ; debug
     jc load_fail
     jmp .find_fs_driver
@@ -559,6 +560,11 @@ read_file:
     add eax, ecx
     add eax, edx
     mov [DAP.sector_start], eax
+    mov ecx, [fat_bpb.part_start]
+    add [DAP.sector_start], ecx
+    mov edx, [DAP.sector_start]
+    ; cmp esi, 3
+    ; je $
     xor ecx, ecx
     mov cl, [fat_bpb.sectors_per_cluster]
     mov [DAP.read_count], cx
@@ -856,10 +862,12 @@ k_info:
 ;loaded_modules points to a struct array containing a ptr to the entry point of each pre-loaded module to be executed during startup
 disk_module_struct:
     .ptr: dd 0
+    .size: dd 0
     .type:  dd 1
     .next_entry: dd fs_module_struct
 fs_module_struct:
     .ptr: dd 0
+    .size: dd 0
     .type: dd 2
     .next_entry: dd 0
 kernel_file: db "kernel", 0, 0, "elf"

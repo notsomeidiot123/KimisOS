@@ -20,8 +20,8 @@ extern void kmain(kernel_info_t *kernel_info){
     //TODO: Map and load filesystem and disk modules
     //TODO: Start Initial Process
     
-    printf("%x", kernel_info->loaded_modules->ptr);
-    printf("%x", kmain);
+    printf("%x\n", *(uint32_t *)kernel_info->loaded_modules->ptr);
+    printf("%x", kernel_info->loaded_modules->size);
     
     init_scheduler();
     thread_start(pid0);

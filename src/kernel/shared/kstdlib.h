@@ -5,6 +5,7 @@
 
 typedef struct module_linked_list{
     void *ptr;
+    uint32_t size;
     uint32_t type;
     struct module_linked_list *link;
 }__attribute__((packed)) kernel_module_t;
