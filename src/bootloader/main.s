@@ -353,12 +353,13 @@ part_2:
         call open_file
         cmp eax, -1
         je .start32_no_fs
+        mov [fs_module_struct.size], edx
         mov eax, esi
         and edx, 0xfffffc00
         add edx, 0x1000
         add [kload_paddr], edx
         
-        mov edi, edx
+        mov edi, [kload_paddr]
         mov [fs_module_struct.ptr], edi
         call read_file
         

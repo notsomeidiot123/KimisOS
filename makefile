@@ -1,6 +1,7 @@
 CC := gcc
 AS := nasm
 CFLAGS:=-g -c -m32 -fno-pie -mno-sse -O3 -D __bits__=32 -Wno-int-to-pointer-cast -Wno-pointer-to-int-cast -Wno-incompatible-pointer-types -Wno-address-of-packed-member -Wno-discarded-qualifiers -fno-stack-protector -mno-red-zone -mno-sse -mno-sse2 -ffreestanding -nostdlib -mno-mmx
+CFLAGS_MODULE:=-g -c -m32 -mno-sse -O3 -D __bits__=32 -Wno-int-to-pointer-cast -Wno-pointer-to-int-cast -Wno-incompatible-pointer-types -Wno-address-of-packed-member -Wno-discarded-qualifiers -fno-stack-protector -mno-red-zone -mno-sse -mno-sse2 -ffreestanding -nostdlib -mno-mmx
 BL_ASFLAGS := -f bin
 SRCS := $(wildcard src/kernel/*/*.c)
 OBJS := $(patsubst src/kernel/%.c, bin/kernel/%.o, $(SRCS))
@@ -21,7 +22,7 @@ bootloader:
 # kernel: $(OBJS)
 kernel:
 	nasm src/kernel/entry.s -o bin/kernel/entry.o -f elf32
-	gcc src/kmodules/disk_driver.c $(CFLAGS) -o bin/modules/disk_driver.o -m32
+	gcc src/kmodules/disk_driver.c $(CFLAGS_MODULE) -o bin/modules/disk_driver.o -m32
 	sh c_build_helper.sh
 	nasm src/kernel/arch_i386/idt.s -o bin/kernel/idt.o -felf32
 	# ld -T linker.ld bin/kernel/entry.o bin/kernel/*.o -melf_i386

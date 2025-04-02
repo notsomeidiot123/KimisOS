@@ -1,7 +1,13 @@
 #pragma once
 // #include "memory.h"
+#include "stdint.h"
 #include "../drivers/serial.h"
 #include "interrupts.h"
+
+#define MLOG_DEBUG 1
+#define MLOG_PRINT 2
+#define MLOG_WARN 3
+#define MLOG_ERR 4
 
 typedef struct module_linked_list{
     void *ptr;
@@ -21,6 +27,8 @@ typedef struct kernel_info{
     kernel_module_t *loaded_modules;
     // uint32_t loaded_module_count;
 }__attribute__((packed)) kernel_info_t;
+
+void mlog(char *module, char *str, uint32_t type, ...);
 
 
 #define MODULE_TYPE_DISK 1

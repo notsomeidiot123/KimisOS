@@ -43,30 +43,40 @@ void debug_puts(char *string){
         outb(com_ports[0], *string++);
     }
 }
-
-void printf(char *string, ...){
+void printf(char *str, ...){
     va_list vars;
-    va_start(vars, string);
+    va_start(vars, str);
+    vprintf(str, vars);
+    va_end(vars);
+}
+
+void vprintf(char *string, va_list vars){
     while(*string){
         if(*string == '%'){
+            string++;
             int32_t num = 0;
+            char *ptr = 0;
             char numb[12];
-            switch(*(string + 1)){
+            switch(*string){
                 case 'd':
-                    string += 2;
+                    string++;
                     num = va_arg(vars, int32_t);
                     itoa(num, numb, 10);
                     debug_puts(numb);
                     continue;
                 case 'x':
                     // debug_puts(":3");
-                    string += 2;
+                    string++;
                     num = va_arg(vars, int32_t);
                     // char hnumb[12];
                     itoa(num, numb, 16);
                     strpad(numb, '0', 8);
                     debug_puts(numb);
                     continue;
+                case 's':
+                    string++;
+                    ptr = va_arg(vars, char *);
+                    printf(ptr);
             }
         }
         outb(com_ports[0], *string);
