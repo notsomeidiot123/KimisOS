@@ -3,10 +3,10 @@
 
 char* log_info_types[] = {
     "",
-    ":DEBUG",
+    "| DEBUG",
     "",
-    ":WARNING",
-    ":ERROR"
+    "| WARNING",
+    "| ERROR"
 };
 
 void mlog(char *module, char *str, uint32_t type, ...){
@@ -15,6 +15,6 @@ void mlog(char *module, char *str, uint32_t type, ...){
     if(!type || type > 4){
         return;
     }
-    printf("[ %s %s]", module, log_info_types[type]);
+    printf("[ %s %s ]", module, log_info_types[type]);
     vprintf(str, vars);
 }

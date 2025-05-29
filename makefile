@@ -1,7 +1,7 @@
 CC := gcc
 AS := nasm
 CFLAGS:=-g -c -m32 -fno-pie -mno-sse -O3 -D __bits__=32 -Wno-int-to-pointer-cast -Wno-pointer-to-int-cast -Wno-incompatible-pointer-types -Wno-address-of-packed-member -Wno-discarded-qualifiers -fno-stack-protector -mno-red-zone -mno-sse -mno-sse2 -ffreestanding -nostdlib -mno-mmx
-CFLAGS_MODULE:=-g -c -m32 -mno-sse -O3 -D __bits__=32 -Wno-int-to-pointer-cast -Wno-pointer-to-int-cast -Wno-incompatible-pointer-types -Wno-address-of-packed-member -Wno-discarded-qualifiers -fno-stack-protector -mno-red-zone -mno-sse -mno-sse2 -ffreestanding -nostdlib -mno-mmx
+CFLAGS_MODULE:=-g -c -m32 -fpie -mno-sse -O3 -D __bits__=32 -Wno-int-to-pointer-cast -Wno-pointer-to-int-cast -Wno-incompatible-pointer-types -Wno-address-of-packed-member -Wno-discarded-qualifiers -fno-stack-protector -mno-red-zone -mno-sse -mno-sse2 -ffreestanding -nostdlib -mno-mmx
 BL_ASFLAGS := -f bin
 SRCS := $(wildcard src/kernel/*/*.c)
 OBJS := $(patsubst src/kernel/%.c, bin/kernel/%.o, $(SRCS))
@@ -28,7 +28,7 @@ kernel:
 	# ld -T linker.ld bin/kernel/entry.o bin/kernel/*.o -melf_i386
 	ld -T linker.ld bin/kernel/*.o -melf_i386 -o kernel.elf
 	ld -T linker.ld -o kernel_interface.elf -r -R kernel.elf -melf_i386
-	ld bin/modules/disk_driver.o kernel_interface.elf -o idm.elf -melf_i386
+	ld -pic bin/modules/disk_driver.o kernel_interface.elf -o idm.elf -melf_i386
 # %.o: $(SRCS)
 # 	mkdir -p bin/kernel/$(shell dirname $@)
 # 	$(CC) $(CFLAGS) $< -o $@

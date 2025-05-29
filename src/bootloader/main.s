@@ -332,9 +332,11 @@ part_2:
     je .find_fs_driver_no_disk
     mov [disk_module_struct.size], edx
     mov esi, eax
-    and edx, 0xfffffc00
-    add edx, 0x1000
+    and edx, 0xfffff000
+    add edx, 0x2000
     add [kload_paddr], edx
+    ; mov eax, [kload_paddr]
+    ; jmp $
     ; debug
     mov edi, [kload_paddr]
     mov [disk_module_struct.ptr], edi
