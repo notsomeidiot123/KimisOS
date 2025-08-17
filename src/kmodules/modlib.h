@@ -1,0 +1,1 @@
+typedef void (*KOS_MAPI_FP)(unsigned int function, ...);

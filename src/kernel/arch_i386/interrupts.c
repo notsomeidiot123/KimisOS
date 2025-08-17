@@ -5,6 +5,37 @@
 
 extern void _isr0();
 extern void _isr1();
+extern void _isr2();
+extern void _isr3();
+extern void _isr4();
+extern void _isr5();
+extern void _isr6();
+extern void _isr7();
+extern void _isr8();
+extern void _isr9();
+extern void _isr10();
+extern void _isr11();
+extern void _isr12();
+extern void _isr13();
+extern void _isr14();
+extern void _isr15();
+extern void _isr16();
+extern void _isr17();
+extern void _isr18();
+extern void _isr19();
+extern void _isr20();
+extern void _isr21();
+extern void _isr22();
+extern void _isr23();
+extern void _isr24();
+extern void _isr25();
+extern void _isr26();
+extern void _isr27();
+extern void _isr28();
+extern void _isr29();
+extern void _isr30();
+extern void _isr31();
+
 
 extern void _irq0();
 extern void _irq1();
@@ -53,12 +84,21 @@ cpu_registers_t *_irq_handler(cpu_registers_t *regs){
     }
     return regs;
 }
+
+char *isr_error_strings[] = {"DE", "DB", "NMI", "BP", "OF", "BR", "UD", "NM", "DF", "CSO", "TS", "NP", "SS", "GP", "PF", "", "MF", "AC", "MC", "XM", "VE", "CP", ""};
+
 void _isr_handler(cpu_registers_t *regs){
     printf("Kernel Panic!\n");
-    printf("ISR: %d\n", regs->int_no);
+    printf("ISR: #%s\n", isr_error_strings[regs->int_no]);
     printf("EAX: %x EBX: %x ECX: %x EDX: %x\n", regs->eax, regs->ebx, regs->ecx, regs->edx);
     printf("ESI: %x EDI: %x ESP: %x EBP: %x\n", regs->esi, regs->edi, regs->esp, regs->ebp);
     printf("EIP: %x CS: %x DS: %x SS: %x\n", regs->eip, regs->cs, regs->ds, regs->ss);
+    printf("Error Code: %x\n", regs->pfa);
+    if (regs->int_no == 14){
+        uint32_t cr2;
+        asm volatile("mov %%cr3, %%eax;mov %0, %%eax": "=r"(cr2));
+        printf("Address: %x", cr2);
+    }
     for(;;);
 }
 
@@ -81,10 +121,43 @@ void install_irq_handler(void (*handler)(), uint8_t irqno){
 }
 
 void init_idt(){
-    for(uint32_t i = 0; i < 32; i++){
-        set_idt_entry(i, (_isr0 + ((_isr1 - _isr0) * i)), IDT_GATE_INT, 0x10);
-        // printf("int %d: address: %x\n", i, _isr0 + (_isr1 - _isr0) * i);
-    }
+    // for(uint32_t i = 0; i < 32; i++){
+    //     set_idt_entry(i, (_isr0 + ((_isr1 - _isr0) * i)), IDT_GATE_INT, 0x10);
+    //     // printf("int %d: address: %x\n", i, _isr0 + (_isr1 - _isr0) * i);
+    // }
+    set_idt_entry(0, _isr0, IDT_GATE_INT, 0x10);
+    set_idt_entry(1, _isr1, IDT_GATE_INT, 0x10);
+    set_idt_entry(2, _isr2, IDT_GATE_INT, 0x10);
+    set_idt_entry(3, _isr3, IDT_GATE_INT, 0x10);
+    set_idt_entry(4, _isr4, IDT_GATE_INT, 0x10);
+    set_idt_entry(5, _isr5, IDT_GATE_INT, 0x10);
+    set_idt_entry(6, _isr6, IDT_GATE_INT, 0x10);
+    set_idt_entry(7, _isr7, IDT_GATE_INT, 0x10);
+    set_idt_entry(8, _isr8, IDT_GATE_INT, 0x10);
+    set_idt_entry(9, _isr9, IDT_GATE_INT, 0x10);
+    set_idt_entry(10, _isr10, IDT_GATE_INT, 0x10);
+    set_idt_entry(11, _isr11, IDT_GATE_INT, 0x10);
+    set_idt_entry(12, _isr12, IDT_GATE_INT, 0x10);
+    set_idt_entry(13, _isr13, IDT_GATE_INT, 0x10);
+    set_idt_entry(14, _isr14, IDT_GATE_INT, 0x10);
+    set_idt_entry(15, _isr15, IDT_GATE_INT, 0x10);
+    set_idt_entry(16, _isr16, IDT_GATE_INT, 0x10);
+    set_idt_entry(17, _isr17, IDT_GATE_INT, 0x10);
+    set_idt_entry(18, _isr18, IDT_GATE_INT, 0x10);
+    set_idt_entry(19, _isr19, IDT_GATE_INT, 0x10);
+    set_idt_entry(20, _isr20, IDT_GATE_INT, 0x10);
+    set_idt_entry(21, _isr21, IDT_GATE_INT, 0x10);
+    set_idt_entry(22, _isr22, IDT_GATE_INT, 0x10);
+    set_idt_entry(23, _isr23, IDT_GATE_INT, 0x10);
+    set_idt_entry(24, _isr24, IDT_GATE_INT, 0x10);
+    set_idt_entry(25, _isr25, IDT_GATE_INT, 0x10);
+    set_idt_entry(26, _isr26, IDT_GATE_INT, 0x10);
+    set_idt_entry(27, _isr27, IDT_GATE_INT, 0x10);
+    set_idt_entry(28, _isr28, IDT_GATE_INT, 0x10);
+    set_idt_entry(29, _isr29, IDT_GATE_INT, 0x10);
+    set_idt_entry(30, _isr30, IDT_GATE_INT, 0x10);
+    set_idt_entry(31, _isr31, IDT_GATE_INT, 0x10);
+
     // printf("last ")
     for(uint32_t i = 0; i < 16; i++){
         set_idt_entry(i + 32, (_irq0 + ((_irq1 - _irq0) * i)), IDT_GATE_INT, 0x10);

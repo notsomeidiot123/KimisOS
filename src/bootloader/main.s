@@ -351,21 +351,41 @@ part_2:
         mov ax, 0xe44
         int 0x10
     .find_fs_driver:
+        ; mov edi, fs_module_file
+        ; call open_file
+        ; cmp eax, -1
+        ; je .start32_no_fs
+        ; mov [fs_module_struct.size], edx
+        ; mov eax, esi
+        ; and edx, 0xfffffc00
+        ; add edx, 0x1000
+        ; add [kload_paddr], edx
+        
+        ; mov edi, [kload_paddr]
+        ; mov [fs_module_struct.ptr], edi
+        ; call read_file
+        
+        ; jc load_fail
+        ;
         mov edi, fs_module_file
         call open_file
+        ; debug
         cmp eax, -1
         je .start32_no_fs
         mov [fs_module_struct.size], edx
-        mov eax, esi
-        and edx, 0xfffffc00
-        add edx, 0x1000
+        mov esi, eax
+        and edx, 0xfffff000
+        add edx, 0x2000
         add [kload_paddr], edx
-        
+        ; mov eax, [kload_paddr]
+        ; jmp $
+        ; debug
         mov edi, [kload_paddr]
         mov [fs_module_struct.ptr], edi
         call read_file
-        
         jc load_fail
+        jmp .start32
+        ;
     .start32_no_fs:
         mov ax, 0xe46
         int 0x10

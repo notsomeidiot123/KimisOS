@@ -21,15 +21,23 @@ void *load_segment(program_entry_t entry, void *file_data, void *base_segment, u
             }
             else{
                 segment = base_segment + (entry.vaddr & 0xfffff000);
-                map(segment, (void *)pm_alloc(), PT_PRESENT | map_flags);
+                uint32_t count = 1;
+                count += ((entry.vaddr+entry.msize) - entry.vaddr) ? 1 : 0;
+                count += entry.msize/4096;
+                printf("count: %x\n", count);
+                // for (;;);
+                for(uint32_t i = 0; i < count; i++){
+                    map(segment + (i << 12), (void *)pm_alloc(), PT_PRESENT | map_flags);
+                    printf("Mapping : %x\n", segment + (i << 12));
+                }
             }
             for(uint32_t i = 0; i < entry.fsize/sizeof(uint32_t) + 1; i++){
-                (segment)[i] = ((uint32_t *)(file_data))[i + entry.data_offset];
+                segment[i] = ((uint32_t *)(file_data))[i + entry.data_offset/sizeof(uint32_t)];
                 // printf("Writing to %x\n", (uint32_t)base_segment+i+entry.vaddr);
             }
         }
     }
-    printf("dSegment: %x\n", data_offset);
+    printf("data_offset: %x\n", data_offset);
     return base_segment;
 }
 
@@ -55,10 +63,12 @@ void *load_elf(void *file_data, uint32_t map_flags){
         //     }
         // }
         base_segment = load_segment(program_header[i], file_data, base_segment, map_flags);
-        
     }
     // void (*vt)(void) = base_segment;
-    uint32_t* vt = base_segment;
-    printf("%x", *vt);
+    uint32_t (*vt)(uint32_t) = base_segment + 0x1000;
+    // printf("%x", *vt);
+    uint32_t i = (*vt)(0);
+    printf("%x\n", i);
+    for(;;);
     // (*vt)();
 }

@@ -73,6 +73,7 @@ _isr5:
     jmp _isr_common_stub
 _isr6:
     cli
+    xchg bx, bx
     push dword 0
     push dword 6
     jmp _isr_common_stub
@@ -83,7 +84,6 @@ _isr7:
     jmp _isr_common_stub
 _isr8:
     cli
-    push dword 0
     push dword 8
     jmp _isr_common_stub
 _isr9:
@@ -123,6 +123,7 @@ _isr16:
     jmp _isr_common_stub
 _isr17:
     cli
+    push dword 0
     push dword 17
     jmp _isr_common_stub
 _isr18:
@@ -142,6 +143,7 @@ _isr20:
     jmp _isr_common_stub
 _isr21:
     cli
+    push dword 0
     push dword 21
     jmp _isr_common_stub
 _isr22:
@@ -197,18 +199,16 @@ extern _isr_handler
 global _isr_common_stub
 
 _isr_common_stub:
-    push eax
-    push ebx
-    push ecx
-    push edx
-    push ebp
-    push esi
-    push edi
+    pushad
     push ds
     push es
     push fs
     push gs
-    
+    mov ax, 0x10
+    mov ds, ax
+    mov es, ax
+    mov fs, ax
+    mov gs, ax
     push esp;push argument
     call _isr_handler
     pop esp
@@ -217,13 +217,7 @@ _isr_common_stub:
     pop fs
     pop es
     pop ds
-    pop edi
-    pop esi
-    pop ebp
-    pop edx
-    pop ecx
-    pop ebx
-    pop eax
+    popad
     add esp, 8
     iret
 
