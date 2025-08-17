@@ -9,7 +9,7 @@ char *flags[] = {"---", "X--", "-W-", "XW-", "--R", "X-R", "-WR", "XWR"};
 
 void *load_segment(program_entry_t entry, void *file_data, void *base_segment, uint32_t map_flags){
     // mlog("ELFLOAD", "p_addr: %d\n", MLOG_DEBUG, entry.paddr);
-    printf("Type: %x, Flags: %s, Vaddr: %x, Offset: %x, Size: %x, Align: %x\n", entry.type, flags[entry.flags], entry.vaddr, entry.data_offset, entry.msize, entry.alignment);
+    printf("Type: %x, Flags: %s, Vaddr: %x, Offset: %x, Size: %x, Align: %x\n", entry.type, flags[entry.flags], entry.paddr, entry.data_offset, entry.msize, entry.alignment);
     uint32_t *segment;
     uint32_t data_offset = ((elf_header_t *)file_data)->entry_offset;
     printf("Base: %x\n", base_segment);
@@ -23,12 +23,12 @@ void *load_segment(program_entry_t entry, void *file_data, void *base_segment, u
                 segment = base_segment + (entry.vaddr & 0xfffff000);
                 uint32_t count = 1;
                 count += ((entry.vaddr+entry.msize) - entry.vaddr) ? 1 : 0;
-                count += entry.msize/4096;
-                printf("count: %x\n", count);
+                count += entry.msize/4096 + 1;
+                // printf("count: %x\n", count);
                 // for (;;);
                 for(uint32_t i = 0; i < count; i++){
-                    map(segment + (i << 12), (void *)pm_alloc(), PT_PRESENT | map_flags);
-                    printf("Mapping : %x\n", segment + (i << 12));
+                    map(segment + (i << 12)/4, (void *)pm_alloc(), PT_PRESENT | map_flags);
+                    // printf("Mapping : %x\n", segment + (i << 12)/4);
                 }
             }
             for(uint32_t i = 0; i < entry.fsize/sizeof(uint32_t) + 1; i++){
@@ -65,10 +65,12 @@ void *load_elf(void *file_data, uint32_t map_flags){
         base_segment = load_segment(program_header[i], file_data, base_segment, map_flags);
     }
     // void (*vt)(void) = base_segment;
-    uint32_t (*vt)(uint32_t) = base_segment + 0x1000;
+    void (*vt)(uint32_t) = base_segment + header->entry_offset;
     // printf("%x", *vt);
-    uint32_t i = (*vt)(0);
-    printf("%x\n", i);
-    for(;;);
+    (*vt)(0);
+    // printf("%x\n", i);
+    // for(;;);
     // (*vt)();
+    printf(":D\n");
+    return 0;
 }

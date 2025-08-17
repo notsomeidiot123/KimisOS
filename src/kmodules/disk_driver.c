@@ -3,7 +3,7 @@
 
 KOS_MAPI_FP api;
 
-uint32_t init(KOS_MAPI_FP module_api){
+void init(KOS_MAPI_FP module_api){
     uint16_t *t = (void *)0xb8000;
     *t = 0x0f41;
     api = module_api;
@@ -11,5 +11,5 @@ uint32_t init(KOS_MAPI_FP module_api){
     //     (*t)++;
     //     // asm volatile( " " );
     // }
-    return &api;
+    return;
 }

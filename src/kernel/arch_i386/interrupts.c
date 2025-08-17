@@ -96,7 +96,7 @@ void _isr_handler(cpu_registers_t *regs){
     printf("Error Code: %x\n", regs->pfa);
     if (regs->int_no == 14){
         uint32_t cr2;
-        asm volatile("mov %%cr3, %%eax;mov %0, %%eax": "=r"(cr2));
+        asm volatile("mov %%cr2, %%eax;mov %0, %%eax": "=r"(cr2));
         printf("Address: %x", cr2);
     }
     for(;;);
