@@ -71,6 +71,7 @@ uint32_t get_paddr(void *addr);
 uint32_t pm_alloc();
 void pm_reserve(uint32_t addr);
 void pm_free(uint32_t addr);
+
 inline void set_cr3(void *cr3){
     asm volatile("mov %0, %%eax; mov %%eax, %%cr3":: "r"(cr3));
 }

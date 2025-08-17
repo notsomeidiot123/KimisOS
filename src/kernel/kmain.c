@@ -32,6 +32,7 @@ extern void kmain(kernel_info_t *kernel_info){
     mlog("KERNEL", "Initializing Scheduler & starting PID 1\n", MLOG_PRINT);
     boot_info = kernel_info;
     init_scheduler();
+    //scheduler doesn't work if there is no PID0, and I don't know why.
     thread_start(pid0);
     thread_start(sysinit);
     enable_interrupts();

@@ -141,7 +141,7 @@ void *get_new_page(uint32_t flags){
 }
 void *kmalloc(uint32_t size_pgs){
     // static uint8_t fake = 0;
-    uint32_t i = 1 << 10; //4mb/4096 (start search at 1mb line)
+    uint32_t i = 0xc0000000 >> 12; //4mb/4096 (start search at 1mb line)
     while(i < (1 << 22)){
         uint8_t found = 1;
         for(uint32_t j = 0; j < size_pgs; j++){

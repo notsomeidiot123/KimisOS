@@ -2,9 +2,9 @@
 #include <stdarg.h>
 
 char* log_info_types[] = {
-    "",
+    "\b",
     "| DEBUG",
-    "",
+    "\b",
     "| WARNING",
     "| ERROR"
 };

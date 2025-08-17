@@ -34,4 +34,24 @@ typedef struct{
     uint16_t section_strtab_index;
 }__attribute__((packed)) elf_header_t;
 
-void *load_elf(void *file_data);
+typedef struct{
+    uint32_t type;
+    uint32_t data_offset;
+    uint32_t vaddr;
+    uint32_t paddr;
+    uint32_t fsize;//size in file
+    uint32_t msize;//size in memory
+    uint32_t flags;
+    uint32_t alignment;
+}__attribute__((packed))program_entry_t;
+
+#define PROG_ENT_FLAGS_EXE 1
+#define PROG_ENT_FLAGS_WRITE 2
+#define PROG_END_FLAGS_READ 4
+
+#define ELF_TYPE_RELOC 1
+#define ELF_TYPE_EXE 2
+#define ELF_TYPE_SHARED 3
+#define ELF_TYPE_CORE 4
+
+void *load_elf(void *file_data, uint32_t map_flags);
