@@ -77,6 +77,12 @@ void vprintf(char *string, va_list vars){
                     string++;
                     ptr = va_arg(vars, char *);
                     printf(ptr);
+                    continue;
+                case 'c':
+                    string++;
+                    num = va_arg(vars, int32_t);
+                    printf((char[]){num, 0});
+                    continue;
             }
         }
         outb(com_ports[0], *string);

@@ -5,11 +5,6 @@ KOS_MAPI_FP api;
 
 void init(KOS_MAPI_FP module_api){
     uint16_t *t = (void *)0xb8000;
-    *t = 0x0f41;
-    api = module_api;
-    // for(int i = 0; i < 1000; i++){
-    //     (*t)++;
-    //     // asm volatile( " " );
-    // }
+    *t = 0xf000;
     return;
 }

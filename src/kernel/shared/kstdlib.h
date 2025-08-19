@@ -12,9 +12,22 @@
 typedef struct module_linked_list{
     void *ptr;
     uint32_t size;
-    uint32_t type;
+    uint32_t id;
+    uint8_t flags;
     struct module_linked_list *link;
 }__attribute__((packed)) kernel_module_t;
+
+typedef struct vector{
+    void *ptr;
+    uint32_t size;
+    uint32_t sizeof_elements;
+}vector_t;
+
+vector_t *init_vector(void *vecptr, uint32_t sizeof_elements, uint32_t elements, void *initializer);
+void *vector_get(uint32_t pos, vector_t *vector);
+void vector_set(uint32_t pos, vector_t *vector, void *new_element);
+void vector_push(vector_t *vector, void *new_element);
+void vector_pop(uint32_t pos, vector_t *vector, void *element);
 
 typedef struct kernel_info{
     void *mmap_ptr;

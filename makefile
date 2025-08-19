@@ -1,6 +1,6 @@
 CC := gcc
 AS := nasm
-CFLAGS:=-g -c -m32 -fno-pie -mno-sse -O3 -D __bits__=32 -Wno-int-to-pointer-cast -Wno-pointer-to-int-cast -Wno-incompatible-pointer-types -Wno-address-of-packed-member -Wno-discarded-qualifiers -fno-stack-protector -mno-red-zone -mno-sse -mno-sse2 -ffreestanding -nostdlib -mno-mmx
+CFLAGS:=-g -c -m32 -fno-pie -mno-sse -O3 -D __bits__=32 -Wall -Wno-int-to-pointer-cast -Wno-pointer-to-int-cast -Wno-incompatible-pointer-types -Wno-address-of-packed-member -Wno-discarded-qualifiers -fno-stack-protector -mno-red-zone -mno-sse -mno-sse2 -ffreestanding -nostdlib -mno-mmx
 CFLAGS_MODULE:=-g -c -m32 -fpie -pie -mno-sse -O3 -D __bits__=32 -Wno-int-to-pointer-cast -Wno-pointer-to-int-cast -Wno-incompatible-pointer-types -Wno-address-of-packed-member -Wno-discarded-qualifiers -fno-stack-protector -mno-red-zone -mno-sse -mno-sse2 -ffreestanding -nostdlib -mno-mmx
 BL_ASFLAGS := -f bin
 LDFLAGS_MODULE:=-melf_i386 -e init --no-dynamic-linker -static -nostdlib
@@ -31,6 +31,7 @@ kernel:
 	ld -T linker.ld bin/kernel/*.o -melf_i386 -o kernel.elf -static
 # 	ld -T linker.ld -o kernel_interface.elf -r -R kernel.elf -melf_i386
 	ld -pie bin/modules/disk_driver.o -o idm.elf -melf_i386 -e init --no-dynamic-linker -static -nostdlib
+# 	ld bin/modules/fs_driver.o -o ifsm.elf -melf_i386
 	ld -pie bin/modules/fs_driver.o -o ifsm.elf -melf_i386 -e init --no-dynamic-linker -static -nostdlib
 # %.o: $(SRCS)
 # 	mkdir -p bin/kernel/$(shell dirname $@)

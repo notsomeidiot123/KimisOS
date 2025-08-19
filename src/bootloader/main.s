@@ -887,11 +887,13 @@ disk_module_struct:
     .ptr: dd 0
     .size: dd 0
     .type:  dd 1
+    .flags: db 0
     .next_entry: dd fs_module_struct
 fs_module_struct:
     .ptr: dd 0
     .size: dd 0
     .type: dd 2
+    .flags: db 0
     .next_entry: dd 0
 kernel_file: db "kernel", 0, 0, "elf"
 disk_module_file: db "idm", 0, 0, 0, 0, 0, "elf"

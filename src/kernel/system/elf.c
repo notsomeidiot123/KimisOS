@@ -9,10 +9,9 @@ char *flags[] = {"---", "X--", "-W-", "XW-", "--R", "X-R", "-WR", "XWR"};
 
 void *load_segment(program_entry_t entry, void *file_data, void *base_segment, uint32_t map_flags){
     // mlog("ELFLOAD", "p_addr: %d\n", MLOG_DEBUG, entry.paddr);
-    printf("Type: %x, Flags: %s, Vaddr: %x, Offset: %x, Size: %x, Align: %x\n", entry.type, flags[entry.flags], entry.paddr, entry.data_offset, entry.msize, entry.alignment);
+    // printf("Type: %x, Flags: %s, Vaddr: %x, Offset: %x, Size: %x, Align: %x\n", entry.type, flags[entry.flags], entry.paddr, entry.data_offset, entry.msize, entry.alignment);
     uint32_t *segment;
-    uint32_t data_offset = ((elf_header_t *)file_data)->entry_offset;
-    printf("Base: %x\n", base_segment);
+    // printf("Base: %x\n", base_segment);
     if(entry.type == 1){
         if(((elf_header_t *)(file_data))->type == ELF_TYPE_SHARED){
             if(base_segment == 0){
@@ -24,23 +23,28 @@ void *load_segment(program_entry_t entry, void *file_data, void *base_segment, u
                 uint32_t count = 1;
                 count += ((entry.vaddr+entry.msize) - entry.vaddr) ? 1 : 0;
                 count += entry.msize/4096 + 1;
-                // printf("count: %x\n", count);
-                // for (;;);
                 for(uint32_t i = 0; i < count; i++){
                     map(segment + (i << 12)/4, (void *)pm_alloc(), PT_PRESENT | map_flags);
-                    // printf("Mapping : %x\n", segment + (i << 12)/4);
                 }
             }
             for(uint32_t i = 0; i < entry.fsize/sizeof(uint32_t) + 1; i++){
                 segment[i] = ((uint32_t *)(file_data))[i + entry.data_offset/sizeof(uint32_t)];
-                // printf("Writing to %x\n", (uint32_t)base_segment+i+entry.vaddr);
             }
         }
+        else if(((elf_header_t *)(file_data))->type == ELF_TYPE_EXE){
+            //This is where Not shared objects and drivers will be loaded
+            // I'll do this when I stop hyperfixating on the other parts of my operating system
+        }
     }
-    printf("data_offset: %x\n", data_offset);
+    if (entry.type == 2){
+        //What is this for?
+        //TODO: Find out how to handle Dynamic sections
+    }
+    // printf("data_offset: %x\n", data_offset);
     return base_segment;
 }
 
+//returns entry address of elf file
 void *load_elf(void *file_data, uint32_t map_flags){
     elf_header_t *header = file_data;
     if(header->magic != 0x464c457f || header->type == ELF_TYPE_CORE){
@@ -50,27 +54,8 @@ void *load_elf(void *file_data, uint32_t map_flags){
     uint32_t program_header_count = header->program_entry_count;
     mlog(MODULE_NAME, "PROGRAM ENTRIES: %d\n", MLOG_PRINT, program_header_count);
     void *base_segment = 0;
-    void *entry_offet = 0;
     for(uint32_t i = 0; i < program_header_count; i++){
-        // mlog("ELFLOAD", "Type: %x, Flags: %s, ALIGN: %x\n", MLOG_DEBUG, program_header[i].type, flags[program_header[i].flags], program_header[i].alignment);
-        // void *segment_ptr = 0;
-        // if(header->type == ELF_TYPE_SHARED){
-        //     segment_ptr = kmalloc(1 + (program_header[i].msize/4096));
-        // }
-        // else{
-        //     for(uint32_t j = 0; j < program_header[i].msize/4096; j++){
-        //         map(program_header[i].vaddr, get_paddr(file_data + program_header[i].data_offset), );
-        //     }
-        // }
         base_segment = load_segment(program_header[i], file_data, base_segment, map_flags);
     }
-    // void (*vt)(void) = base_segment;
-    void (*vt)(uint32_t) = base_segment + header->entry_offset;
-    // printf("%x", *vt);
-    (*vt)(0);
-    // printf("%x\n", i);
-    // for(;;);
-    // (*vt)();
-    printf(":D\n");
-    return 0;
+    return base_segment + header->entry_offset;
 }
