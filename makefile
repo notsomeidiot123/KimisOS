@@ -11,7 +11,7 @@ all: bootloader tools kernel
 	cp bin/bootloader.bin image.bin
 	qemu-img resize -f raw image.bin 512M
 	./diskwrite -v -l idm.elf ifsm.elf kernel.elf -o image.bin
-	# ./diskwrite -v idm.elf -o image.bin
+# 	./diskwrite -v -o image.bin
 	# ./diskwrite -v -l kernel.elf idm.elf -o image.bin
 	qemu-system-i386 -hda image.bin --no-reboot --no-shutdown -m 32m -smp 2 -serial mon:stdio -D intlog.txt -d int
 tools:
@@ -19,7 +19,16 @@ tools:
 
 bootloader:
 	$(AS) src/bootloader/main.s $(BL_ASFLAGS) -o bin/bootloader.bin
-
+run:
+	qemu-system-i386 -hda image.bin --no-reboot --no-shutdown -m 32m -smp 2 -serial mon:stdio -D intlog.txt -d int
+	
+test: bootloader tools kernel
+	cp bin/bootloader.bin image.bin
+	qemu-img resize -f raw image.bin 512M
+	./diskwrite -v -o image.bin
+	fsck.fat image.bin
+	sudo cp kernel.elf test/kernel.elf
+	make run
 # kernel: $(OBJS)
 kernel:
 	nasm src/kernel/entry.s -o bin/kernel/entry.o -f elf32

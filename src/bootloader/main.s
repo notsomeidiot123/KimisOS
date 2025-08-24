@@ -61,13 +61,13 @@ fat_bpb:
         dd 1048576
 fat_ebpb32:
     .sectors_per_fat:
-        dd 1024
+        dd 2048
     .flags:
         dw 0
     .version:
         db 0, 1
     .root_dir_cluster:
-        dd 2 
+        dd 2
     .fs_info_sector:
         dw 1
     .backup_boot:
@@ -508,6 +508,7 @@ open_file:
     add si, ax
     xor cx, cx
     mov ax, [fat_ebpb32.root_dir_cluster]
+    sub ax, 2
     mov cl, [fat_bpb.sectors_per_cluster]
     mul cx
     add si, ax
@@ -562,11 +563,13 @@ read_file:
     ;args: esi = first cluster in chain
     ;edi = pointer to data
     push esi
+    sub esi, 2
     xor ecx, ecx
     xor edx, edx
     mov eax, esi
     mov cl, [fat_bpb.sectors_per_cluster]
     mul ecx; eax  = offset from file table
+    ; jmp $
 
     push eax
     xor eax, eax
@@ -895,7 +898,7 @@ fs_module_struct:
     .type: dd 2
     .flags: db 0
     .next_entry: dd 0
-kernel_file: db "kernel", 0, 0, "elf"
+kernel_file: db "kernel", 0x0, 0x0, "elf"
 disk_module_file: db "idm", 0, 0, 0, 0, 0, "elf"
 fs_module_file: db "ifsm", 0, 0, 0, 0, "elf"
 loaded_fat_block: dd 0
