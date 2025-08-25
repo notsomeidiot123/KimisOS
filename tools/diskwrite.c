@@ -151,7 +151,7 @@ int write_file(fat_info *info, file_t *file, buffer_t buffer, size_t size, FILE 
     uint8_t *new_buffer = calloc(1, clusters * (info->bpb.bytes_per_sector * info->bpb.sectors_per_cluster ));
     memcpy(new_buffer, buffer, size);
     uint32_t cluster = first_cluster;
-    printf("start: %d count: %d\n", cluster, clusters);
+    // printf("start: %d count: %d\n", cluster, clusters);
     // return -1;
     for(uint32_t i = 0; i < clusters; i++){
         write_sector(disk, info->bpb.reserved_sectors + info->file_table_size_sectors + info->bpb.partition_start + ((cluster - 2) * info->bpb.sectors_per_cluster), info->bpb.sectors_per_cluster, new_buffer + i * info->bpb.sectors_per_cluster * info->bpb.bytes_per_sector);
@@ -176,7 +176,7 @@ int create_file(char *path, fat_info *info, FILE *file, FILE *disk){
     while(root_files[index].filename[0]){
         index++;
     }
-    printf("%s\n", root_files[index].filename);
+    // printf("%s\n", root_files[index].filename);
     verbose && printf("Creating file at index: %d\n", index);
     char *ext = strchr(path, '.');
     char *tmpptr = path;
@@ -280,7 +280,7 @@ int main(int argc, char **argv){
     //     return 0;
     // }
     for(int i = 0; i < filec; i++){
-        printf("\033[1;34mWriting file %d in list: %s\033[0m\n", i, files[i]);
+        // printf("\033[1;34mWriting file %d in list: %s\033[0m\n", i, files[i]);
         FILE *f = fopen(files[i], "r");
         if(!f){
             printf("Error Opening file\n");

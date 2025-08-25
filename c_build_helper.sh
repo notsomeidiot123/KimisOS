@@ -5,7 +5,7 @@ cd src/kernel/
 gcc kmain.c $CFLAGS -o ../../bin/kernel/kmain.o
 for d in ./*/; do
     if [ "$d" != "./obj/" ]; then
-        echo -e "\033[1;32mCompiling files in $d\033[0m"
+        echo "\033[1;32mCompiling files in $d\033[0m"
         for f in $d*.c; do
             echo -e "\033[1;36mfile: $f\033[0m"
             SUF=".c"
