@@ -42,6 +42,7 @@ typedef struct kernel_info{
 }__attribute__((packed)) kernel_info_t;
 
 void mlog(char *module, char *str, uint32_t type, ...);
+void vmlog(char *module, char *str, uint32_t type, va_list vars);
 
 
 #define MODULE_TYPE_DISK 1

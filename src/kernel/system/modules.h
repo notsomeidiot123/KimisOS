@@ -19,7 +19,10 @@
 #define MODULE_API_WRITE 7 //write to virtual file
 #define MODULE_API_CREAT 8 //create a virtual file and assigns it to the the proper module (requires having a read and write function passed)
 #define MODULE_API_DELET 9
-
+#define MODULE_API_MAP 10
+#define MODULE_API_UNMAP 11
+#define MODULE_API_MALLOC 12
+#define MODULE_API_FREE 13
 
 typedef struct module{
     void *init_entry;

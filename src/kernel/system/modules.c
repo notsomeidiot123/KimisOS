@@ -4,14 +4,69 @@
 #include "../shared/memory.h"
 #include <stdarg.h>
 
-
 #define MODULE_NAME "MLOADER"
 
 vector_t *modules;
 vector_t *module_deps;
 
 uint32_t module_api(uint32_t func, ...){
-    
+    va_list vars;
+    va_start(vars, func);
+    uint32_t return_value = 0;
+    switch(func){
+        case MODULE_API_REGISTER:
+            //do something
+            return_value = -1;
+            break;
+        case MODULE_API_ADDFUNC:
+            //do something
+            return_value = -1;
+            break;
+        case MODULE_API_DELFUNC:
+            //do something
+            return_value = -1;
+            break;
+        case MODULE_API_ADDINT:
+            return_value = -1;
+            //do something
+            break;
+        case MODULE_API_DELINT:
+            //do something
+            return_value = -1;
+            break;
+        case MODULE_API_PRINT:
+            // vmlog(MODULE_NAME, "Testing modules calling kernel functions\n", MLOG_PRINT, vars);
+            char *name = va_arg(vars, char *);
+            char *string = va_arg(vars, char *);
+            vmlog(name, string, MLOG_PRINT, vars);
+            break;
+        case MODULE_API_READ:
+            return_value = -1;
+            break;
+        case MODULE_API_WRITE:
+            return_value = -1;
+            break;
+        case MODULE_API_CREAT:
+            return_value = -1;
+            break;
+        case MODULE_API_DELET:
+            return_value = -1;
+            break;
+        case MODULE_API_MAP:
+            return_value = -1;
+            break;
+        case MODULE_API_UNMAP:
+            return_value = -1;
+            break;
+        case MODULE_API_MALLOC: 
+            return_value = -1;
+            break;
+        case MODULE_API_FREE:
+            return_value = -1;
+            break;
+    }
+    va_end(vars);
+    return return_value;
 }
 
 void init_modules(kernel_info_t *kernel_info){
@@ -23,11 +78,11 @@ void init_modules(kernel_info_t *kernel_info){
         if(!module->ptr){
             continue;
         }
-        void (*entry)(void* api) = load_elf(module->ptr, PT_SYS);
+        void (*entry)(void* api, uint32_t version) = load_elf(module->ptr, PT_SYS);
         mlog(MODULE_NAME, "Loaded module with ID %x\n", MLOG_PRINT, module->id);
         // module->type |= 0x8000;//set present flag in type
         module->flags |= MODULE_PRESENT;
         module = module->link;
-        (*entry)(0);
+        (*entry)(module_api, 0);
     }
 }
