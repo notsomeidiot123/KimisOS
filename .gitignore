@@ -9,3 +9,4 @@ diskwrite
 intlog.*
 *.img
 .vscode
+bochsrc

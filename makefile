@@ -9,7 +9,7 @@ OBJS := $(patsubst src/kernel/%.c, bin/kernel/%.o, $(SRCS))
 
 all: bootloader tools kernel
 	cp bin/bootloader.bin image.bin
-	qemu-img resize -f raw image.bin 512M
+	qemu-img resize -f raw image.bin 64M
 	./diskwrite idm.elf ifsm.elf kernel.elf -o image.bin
 	sudo mount image.bin mount
 	sudo mkdir mount/mod # for kernel modules
