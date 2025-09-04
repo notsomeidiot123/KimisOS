@@ -16,7 +16,12 @@ uint32_t module_api(uint32_t func, ...){
     switch(func){
         case MODULE_API_REGISTER:
             //do something
-            return_value = -1;
+            void *structure = va_arg(vars, void *);
+            if(structure == 0){
+                return -1;
+            }
+            vector_push(modules, structure);
+            return 0;
             break;
         case MODULE_API_ADDFUNC:
             //do something
