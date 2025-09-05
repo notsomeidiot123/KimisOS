@@ -54,7 +54,8 @@ make fini function to destroy global object, and free any remaining resources.
 
 #define ATA_IDENTIFY 0xEC
 
-#define ATA_MASTER_DRIVE 0x1F0
+#define ATA_PRIMARY_BUS 0x1F0
+#define ATA_SECONDARY_BUS 0x170
 
 #define ATA_IS_ATA(a) a[0] & 0x8000
 #define ATA_GET_SZ28(a) (a[60] | (a[61] << 16))
@@ -93,11 +94,33 @@ make fini function to destroy global object, and free any remaining resources.
 //data address mark not found
 #define ATA_AMNF(a) a & 0x1;
 
+struct {
+    uint8_t pio_mode:1;
+    uint8_t lba48:1;
+    uint8_t drive:2;
+}settings = {1, 0, 0};
+
+
 void fini();
 void ata_identify();
 //return 1 if ready, 0 if not
+
+uint16_t get_bus_from_drive(uint32_t drive){
+    return drive & 2 ? ATA_SECONDARY_BUS : ATA_PRIMARY_BUS;
+}
+
 int ata_ready(uint32_t drive){
-    uint16_t status = inb(drive ATA_ALT_STATUS);
+    uint16_t bus = get_bus_from_drive(drive);
+    if(settings.drive != drive){
+        if(drive & 1){
+            outb(bus ATA_DRIVE_HEAD, drive & 1 ? 0xB0 : 0xA0);
+        }
+        for(uint32_t i = 0; i < 15; i++){
+            uint8_t _ = inb(bus ATA_ALT_STATUS);
+        }
+        settings.drive = drive;
+    }
+    uint8_t status = inb(bus ATA_ALT_STATUS);
     if(!ATA_BSY(status) || ATA_DRQ(status)) return 1;
     return 0;
 }
