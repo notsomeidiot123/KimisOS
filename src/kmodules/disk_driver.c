@@ -61,6 +61,7 @@ make fini function to destroy global object, and free any remaining resources.
 #define ATA_IS_LBA48(a) (a[83] & (1 << 10))
 #define ATA_GET_SZ48L(a) (a[100] | (a[101] << 16))
 #define ATA_GET_SZ48H(a) (a[102] | (a[103] << 16))
+
 //is drive busy?
 #define ATA_BSY(a) a & 0x80
 //Is drive ready?
