@@ -20,3 +20,13 @@ inline uint16_t inw(uint16_t port){
     asm volatile ("inw %1, %0" : "=a"(word) : "Nd"(port));
     return word;
 }
+
+inline void outl(uint16_t port, uint32_t data){
+    asm volatile ("outl %0, %1" :: "a"(data), "Nd"(port));
+}
+
+inline uint32_t inl(uint16_t port){
+    uint32_t byte = 0;
+    asm volatile ("inl %1, %0" : "=a"(byte) : "Nd"(port));
+    return byte;
+}

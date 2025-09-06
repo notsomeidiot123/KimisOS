@@ -10,7 +10,7 @@ uint32_t volatile active_processes;
 uint32_t volatile current_pid;
 uint32_t volatile queue_length;
 uint32_t volatile current_queue_index;
-void init_scheduler(){
+void scheduler_init(){
     // printf("?");
     // process_queue = kmalloc((PROCESS_COUNT * sizeof(uint32_t)) / 4096);
     processes = kmalloc((PROCESS_COUNT * sizeof(process_t)) / 4096);

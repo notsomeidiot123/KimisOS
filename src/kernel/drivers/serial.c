@@ -10,7 +10,7 @@ uint16_t com_ports[8];
 uint8_t com_buffer[8][128];
 uint8_t com_buffer_index[8] = {0};
 
-void init_serial(){
+void serial_init(){
     bda_t *bda = (void*)0x400;
     for(int i = 0; i < 4; i++){
         com_ports[i] = bda->com_ports[i];

@@ -3,6 +3,7 @@ bits 32
 extern kmain
 section .text
 global _start
+;TODO: re-write stub to be compatible with any bootloader
 _start:
     cld
     mov esp, stack_top

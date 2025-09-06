@@ -1,7 +1,7 @@
 #include "pic.h"
 #include "cpuio.h"
 
-void init_pic(uint8_t idt_index){
+void pic_init(uint8_t idt_index){
     uint8_t a1 = inb(PIC1_DATA);
     uint8_t a2 = inb(PIC2_DATA);
     

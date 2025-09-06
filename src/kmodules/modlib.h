@@ -13,8 +13,9 @@
 #define MODULE_API_DELET 9 //delete a virtual file
 #define MODULE_API_MAP 10 //map physical address to virtual address
 #define MODULE_API_UNMAP 11 //unmap physical address to virtual address
-#define MODULE_API_MALLOC 12 //allocate memory in 4kb blocks
-#define MODULE_API_FREE 13 //free memory allocated by malloc
+#define MODULE_API_PADDR 12 //get physical address of memory
+#define MODULE_API_MALLOC 13 //allocate memory in 4kb blocks
+#define MODULE_API_FREE 14 //free memory allocated by malloc
 
 typedef uint32_t (*KOS_MAPI_FP)(unsigned int function, ...);
 typedef struct module{

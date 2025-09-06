@@ -63,18 +63,26 @@ uint32_t module_api(uint32_t func, ...){
         case MODULE_API_UNMAP:
             return_value = -1;
             break;
+        case MODULE_API_PADDR:
+            void *addr = va_arg(vars, void *);
+            return_value = get_paddr(addr);
+            break;
         case MODULE_API_MALLOC: 
-            return_value = -1;
+            uint32_t size_pgs = va_arg(vars, uint32_t);
+            return_value = (uint32_t)kmalloc(size_pgs);
             break;
         case MODULE_API_FREE:
-            return_value = -1;
+            void *ptr = va_arg(vars, void *);
+            kfree(ptr);
+            return_value = 0;
             break;
+        
     }
     va_end(vars);
     return return_value;
 }
 
-void init_modules(kernel_info_t *kernel_info){
+void modules_init(kernel_info_t *kernel_info){
     mlog(MODULE_NAME, "Initializing Boot-Time Modules\n", MLOG_PRINT);
     kernel_module_t *module = kernel_info->loaded_modules;
     // uint32_t i = 0;
