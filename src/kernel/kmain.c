@@ -31,6 +31,7 @@ extern void kmain(kernel_info_t *kernel_info){
     pic_disable();
     pic_setmask(0xfe, PIC1_DATA);
     vfs_init();
+    fcreate("Testing/testing/bleh", 0);
     //TODO: Map and load filesystem and disk modules
     //TODO: Start Initial Process
     mlog("KERNEL", "Initializing Scheduler & starting PID 1\n", MLOG_PRINT);

@@ -24,3 +24,11 @@ typedef struct module{
     char name[16];
     uint8_t flags;
 }module_t;
+
+typedef enum vfile_type{
+    VFILE_POINTER,
+    VFILE_DEVICE,
+    VFILE_MOUNT,
+    VFILE_DIRECTORY,
+    VFILE_FILE,
+}VFILE_TYPE; 

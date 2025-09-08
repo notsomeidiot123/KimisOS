@@ -27,8 +27,8 @@ typedef struct virtual_file_t{
 }vfile_t;
 
 void vfs_init();
-void fcreate();
+void fcreate(char *name, VFILE_TYPE type, ...);
 void fdelete();
 uint32_t fwrite();
 uint32_t fread();
-void fopen();
+void fopen(char *name);
