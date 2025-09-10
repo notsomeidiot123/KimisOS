@@ -6,30 +6,27 @@ typedef enum vfile_type{
     VFILE_DEVICE,
     VFILE_MOUNT,
     VFILE_DIRECTORY,
-    VFILE_FILE,
+    VFILE_PDIR,//used for directories in physical filesystems.
+    VFILE_FILE
 }VFILE_TYPE; 
 
 //this code is gonna be ***really*** unsafe
-typedef struct virtual_file_t{
+typedef struct virtual_file{
     char name[20];
     VFILE_TYPE type;
+    uint32_t id;//to be assigned by driver;
+    uint32_t mount_id;
     union{
         struct{
-            void (*read)(void *data, uint32_t offset, uint32_t count);
-            void (*write)(void *data, uint32_t offset, uint32_t count);
+            void (*read)(struct virtual_file *file, void *data, uint32_t offset, uint32_t count);
+            void (*write)(struct virtual_file *file, void *data, uint32_t offset, uint32_t count);
         }funcs;
         struct{
             void *ptr;
-            uint16_t size_pgs;
-            uint16_t free_bytes;
+            uint32_t size_pgs;
         }__attribute__((packed))data;
     }access;
 }vfile_t;
-
-typedef struct file{
-    uint32_t mount_index;
-    void *dirent;
-}file_t;
 
 typedef enum fs_flags{
     FS_FILE_IS_DIR = 1,
@@ -38,10 +35,10 @@ typedef enum fs_flags{
 }FS_FILE_FLAGS;
 
 typedef struct mount_funcs{
-    void (*write)(file_t *file, void *data, uint32_t offset, uint32_t count);
-    void (*read)(file_t *file, void *data, uint32_t offset, uint32_t count);
-    int (*open)(char *filename, file_t *file);
-    void (*delete)(file_t *file);
+    void (*write)(vfile_t *file, void *data, uint32_t offset, uint32_t count);
+    void (*read)(vfile_t *file, void *data, uint32_t offset, uint32_t count);
+    int (*open)(char *filename, vfile_t *file);
+    void (*delete)(vfile_t *file);
     void (*create)(char *filename, FS_FILE_FLAGS flags);
 }mount_t;
 
@@ -50,5 +47,5 @@ void fcreate(char *name, VFILE_TYPE type, ...);
 void fdelete();
 uint32_t fwrite();
 uint32_t fread();
-vfile_t *search_dir(char *name, vfile_t dir){
-int fopen(char *name, file_t *file);
+vfile_t *search_dir(char *name, vfile_t dir);
+int fopen(char *name, vfile_t *file);

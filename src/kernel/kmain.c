@@ -27,13 +27,13 @@ extern void kmain(kernel_info_t *kernel_info){
     pm_init(kernel_info);
     mlog("KERNEL", "Initializing IDT\n", MLOG_PRINT);
     idt_load();
-    pic_init(32);
+    pic_init(0x20);
     pic_disable();
     pic_setmask(0xfe, PIC1_DATA);
     vfs_init();
-    fcreate("/test", 0);
-    //TODO: Map and load filesystem and disk modules
-    //TODO: Start Initial Process
+    fcreate("/dev", VFILE_DIRECTORY, kmalloc(1), 1);
+    fcreate("/dev/test", VFILE_POINTER, kmalloc(1), 1);
+    fcreate("/dev/test", VFILE_POINTER, kmalloc(1), 1);
     mlog("KERNEL", "Initializing Scheduler & starting PID 1\n", MLOG_PRINT);
     boot_info = kernel_info;
     scheduler_init();

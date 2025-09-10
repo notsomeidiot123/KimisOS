@@ -6,7 +6,9 @@ OUTPUT_FORMAT(elf32-i386)
 SECTIONS{
     . = 0xc0000000;
     .text : AT(ADDR(.text) - 0xc0000000){
+        . = ALIGN(8);
         _code = .;
+        KEEP(*(.multiboot))
         *(.text)
         *(.rodata)
         . = ALIGN(4096);

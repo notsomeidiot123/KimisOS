@@ -30,5 +30,24 @@ typedef enum vfile_type{
     VFILE_DEVICE,
     VFILE_MOUNT,
     VFILE_DIRECTORY,
+    VFILE_PDIR,//used for directories in physical filesystems.
     VFILE_FILE,
-}VFILE_TYPE; 
+}VFILE_TYPE;
+
+typedef struct virtual_file{
+    char name[20];
+    VFILE_TYPE type;
+    uint32_t id;//to be assigned by driver;
+    uint32_t mount_id;
+    union{
+        struct{
+            void (*read)(struct virtual_file *file, void *data, uint32_t offset, uint32_t count);
+            void (*write)(struct virtual_file *file, void *data, uint32_t offset, uint32_t count);
+        }funcs;
+        struct{
+            void *ptr;
+            uint16_t size_pgs;
+            uint16_t free_bytes;
+        }__attribute__((packed))data;
+    }access;
+}vfile_t;

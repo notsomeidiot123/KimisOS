@@ -92,7 +92,7 @@ void map(void *vaddr, void *paddr, uint32_t flags){
 void unmap(void *vaddr){
     uint32_t pd_index = (uint32_t)vaddr >> 22;
     uint32_t pt_index = (uint32_t)vaddr >> 12 & 0x3ff;
-    printf("unmap called");
+    // printf("unmap called");
     uint32_t *pd = (uint32_t *)0xfffff000;
     if(!pd[pd_index]){
         return;
@@ -103,6 +103,7 @@ void unmap(void *vaddr){
     // paddr ^= (paddr & 0xfff);
     // pm_free(paddr);
     asm volatile("invlpg (%0)  " : : "b"(vaddr) : "memory");
+    return;
 }
 void map_4mb(void *vaddr, void *paddr, uint32_t flags){
     //just wanted to get the prototype out
