@@ -16,10 +16,11 @@ typedef struct virtual_file{
     VFILE_TYPE type;
     uint32_t id;//to be assigned by driver;
     uint32_t mount_id;
+    struct virtual_file *parent;//should point to A: a virtual directory, or B: a mounted filesystem
     union{
         struct{
-            void (*read)(struct virtual_file *file, void *data, uint32_t offset, uint32_t count);
-            void (*write)(struct virtual_file *file, void *data, uint32_t offset, uint32_t count);
+            int (*read)(struct virtual_file *file, void *data, uint32_t offset, uint32_t count);
+            int (*write)(struct virtual_file *file, void *data, uint32_t offset, uint32_t count);
         }funcs;
         struct{
             void *ptr;
@@ -47,7 +48,7 @@ typedef struct mount_funcs{
 void vfs_init();
 void fcreate(char *name, VFILE_TYPE type, ...);
 void fdelete();
-uint32_t fwrite();
-uint32_t fread();
+int fwrite(vfile_t *file_entry, void *byte_array, uint32_t offset, uint32_t count);
+int fread(vfile_t *file_entry, void *byte_array, uint32_t offset, uint32_t count);
 vfile_t *search_dir(char *name, vfile_t dir);
 int fopen(char *name, vfile_t *file);

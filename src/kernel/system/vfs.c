@@ -63,6 +63,7 @@ void fcreate(char *name, VFILE_TYPE type, ...){
             //create file in folder;
             vfile_t *vfile = kmalloc(1);
             vfile->type = type;
+            vfile->parent = current_dir;
             uint32_t tmpnsize = strlen(tmp);
             if(tmp[tmpnsize - 1] == '/'){
                 tmp[tmpnsize - 1] = 0;
@@ -109,25 +110,42 @@ void fcreate(char *name, VFILE_TYPE type, ...){
 void fdelete();
 
 // navya was here https://github.com/novabansal
-uint32_t fwrite(vfile_t *file_entry, void *byte_array, uint32_t offset, uint32_t count){
-    // a: a way to call RW functions from any given module
-    // OR
-    // b: specify a pointer to data that is written to virtual file in memory
-    
-    // search through root directory
+int fwrite(vfile_t *file_entry, void *byte_array, uint32_t offset, uint32_t count){
+    //sorry navya, I deleted the comment and it's not coming back :(
     switch(file_entry->type){
+        case VFILE_DIRECTORY:
         case VFILE_POINTER:
             memcpy(byte_array, file_entry->access.data.ptr + offset, count);
+            return 0; //always successful. If it's not, there's been a page fault. Yk, quantum sort style.
             break;
+        case VFILE_MOUNT:
+            mount_t *funcs = file_entry->access.data.ptr;
+            return funcs->write(file_entry, byte_array, offset, count);
         case VFILE_PDIR:
         case VFILE_FILE:
         case VFILE_DEVICE:
-            file_entry->access.funcs.write(file_entry, byte_array, offset, count);
+            return file_entry->access.funcs.write(file_entry, byte_array, offset, count);
             break;
     }
 }
 
-uint32_t fread();
+int fread(vfile_t *file_entry, void *byte_array, uint32_t offset, uint32_t count){
+    switch(file_entry->type){
+        case VFILE_DIRECTORY:
+        case VFILE_POINTER:
+            memcpy(file_entry->access.data.ptr + offset, byte_array, count);
+            return 0; //always successful. If it's not, there's been a page fault. Yk, quantum sort style.
+            break;
+        case VFILE_MOUNT:
+            mount_t *funcs = file_entry->access.data.ptr;
+            return funcs->read(file_entry, byte_array, offset, count);
+        case VFILE_PDIR:
+        case VFILE_FILE:
+        case VFILE_DEVICE:
+            return file_entry->access.funcs.read(file_entry, byte_array, offset, count);
+            break;
+    }
+}
 
 vfile_t *search_dir(char *name, vfile_t dir){
     vfile_t **dir_data = (vfile_t **)dir.access.data.ptr;
@@ -169,3 +187,5 @@ int fopen(char *name, vfile_t *file){
     *file = *tmpfile;
     return 0;
 }
+//who needs a way to delete things?
+//TODO: Write a function to delete files
