@@ -19,11 +19,12 @@
 #define MODULE_API_WRITE 7 //write to virtual file
 #define MODULE_API_CREAT 8 //create a virtual file and assigns it to the the proper module (requires having a read and write function passed)
 #define MODULE_API_DELET 9 //delete a virtual file
-#define MODULE_API_MAP 10 //map physical address to virtual address
-#define MODULE_API_UNMAP 11 //unmap physical address to virtual address
-#define MODULE_API_PADDR 12 //get physical address of memory
-#define MODULE_API_MALLOC 13 //allocate memory in 4kb blocks
-#define MODULE_API_FREE 14 //free memory allocated by malloc
+#define MODULE_API_OPEN 10
+#define MODULE_API_MAP 11 //map physical address to virtual address
+#define MODULE_API_UNMAP 12 //unmap physical address to virtual address
+#define MODULE_API_PADDR 13 //get physical address of memory
+#define MODULE_API_MALLOC 14 //allocate memory in 4kb blocks
+#define MODULE_API_FREE 15 //free memory allocated by malloc
 
 typedef struct module{
     void *init_entry;

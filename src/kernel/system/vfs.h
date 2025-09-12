@@ -46,7 +46,7 @@ typedef struct mount_funcs{
 }mount_t;
 
 void vfs_init();
-void fcreate(char *name, VFILE_TYPE type, ...);
+vfile_t *fcreate(char *name, VFILE_TYPE type, ...);
 void fdelete();
 int fwrite(vfile_t *file_entry, void *byte_array, uint32_t offset, uint32_t count);
 int fread(vfile_t *file_entry, void *byte_array, uint32_t offset, uint32_t count);

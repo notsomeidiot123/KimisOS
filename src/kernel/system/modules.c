@@ -57,6 +57,9 @@ uint32_t module_api(uint32_t func, ...){
         case MODULE_API_DELET:
             return_value = -1;
             break;
+        case MODULE_API_OPEN:
+            return_value = -1;
+            break;
         case MODULE_API_MAP:
             return_value = -1;
             break;

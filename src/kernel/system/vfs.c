@@ -45,7 +45,7 @@ Long comment cause this one's a complicated one.
         specify a pointer to be used as the write function, with the same function prototype as the function above
                 void write(struct virtual_file *file, void *data, uint32_t offset, uint32_t count);
 */
-void fcreate(char *name, VFILE_TYPE type, ...){
+vfile_t *fcreate(char *name, VFILE_TYPE type, ...){
     name += name[0]== '/';
     char *last = strtok(name, '/');
     char *tmp = last;
@@ -79,7 +79,7 @@ void fcreate(char *name, VFILE_TYPE type, ...){
                     vfile->access.data.size_pgs = va_arg(args, uint32_t);
                     add_file(vfile, current_dir);
                     // printf("Created File: %s\n", vfile->name);
-                    return;
+                    break;
                 case VFILE_FILE:
                 case VFILE_DEVICE:
                     void *write = va_arg(args, void *);
@@ -87,8 +87,9 @@ void fcreate(char *name, VFILE_TYPE type, ...){
                     vfile->access.funcs.write = write;
                     vfile->access.funcs.read = read;
                     // strcpy
+                    break;
             }
-            return;
+            return vfile; //allow drivers to make last minute changes before it's sent to the user
         }
         switch(tmpfile->type){
             case VFILE_DIRECTORY:
@@ -98,15 +99,18 @@ void fcreate(char *name, VFILE_TYPE type, ...){
                 ((mount_t*)(tmpfile->access.data.ptr))->create(name + filename_offset, type == VFILE_DIRECTORY ? FS_FILE_IS_DIR : 0);
                 return;
             default:
-                mlog(MODULE_NAME, "Error: Cannot create file with same name as another file! %d\n", MLOG_ERR, tmpfile->type);
-                return;
-                break;
+            mlog(MODULE_NAME, "Error: Cannot create file with same name as another file! %d\n", MLOG_ERR, tmpfile->type);
+            return;
+            break;
         }
         filename_offset += strlen(tmp) + 1;
         tmp = strtok(0, '/');
     }
     return;
 }
+
+//who needs a way to delete things?
+//TODO: Write a function to delete files
 void fdelete();
 
 // navya was here https://github.com/novabansal
@@ -127,6 +131,7 @@ int fwrite(vfile_t *file_entry, void *byte_array, uint32_t offset, uint32_t coun
             return file_entry->access.funcs.write(file_entry, byte_array, offset, count);
             break;
     }
+    return INT32_MIN;//how did we get here?
 }
 
 int fread(vfile_t *file_entry, void *byte_array, uint32_t offset, uint32_t count){
@@ -145,6 +150,7 @@ int fread(vfile_t *file_entry, void *byte_array, uint32_t offset, uint32_t count
             return file_entry->access.funcs.read(file_entry, byte_array, offset, count);
             break;
     }
+    return INT32_MIN; //Okay, alright, funny joke guys but we really shouldn't be able to get here
 }
 
 vfile_t *search_dir(char *name, vfile_t dir){
@@ -187,5 +193,3 @@ int fopen(char *name, vfile_t *file){
     *file = *tmpfile;
     return 0;
 }
-//who needs a way to delete things?
-//TODO: Write a function to delete files
