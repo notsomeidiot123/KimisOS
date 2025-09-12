@@ -4,7 +4,7 @@
 typedef enum vfile_type{
     VFILE_POINTER,
     VFILE_DEVICE,
-    VFILE_MOUNT,
+    VFILE_MOUNT,//in the pointer passed to the function, must specify a read, write, open, create, and delete function.
     VFILE_DIRECTORY,
     VFILE_PDIR,//used for directories in physical filesystems.
     VFILE_FILE
@@ -29,14 +29,16 @@ typedef struct virtual_file{
 }vfile_t;
 
 typedef enum fs_flags{
-    FS_FILE_IS_DIR = 1,
-    FS_FILE_IS_SYSTEM = 2,
-    FS_FILE_IS_HIDDEN = 4,
+    FS_FILE_READ_ONLY = 1,
+    FS_FILE_HIDDEN = 2,
+    FS_FILE_SYSTEM = 4,
+    FS_FILE_IS_DIR = 0x10,
+    FS_FILE_ARCHIVE = 0x20
 }FS_FILE_FLAGS;
 
 typedef struct mount_funcs{
-    void (*write)(vfile_t *file, void *data, uint32_t offset, uint32_t count);
-    void (*read)(vfile_t *file, void *data, uint32_t offset, uint32_t count);
+    int (*write)(vfile_t *file, void *data, uint32_t offset, uint32_t count);
+    int (*read)(vfile_t *file, void *data, uint32_t offset, uint32_t count);
     int (*open)(char *filename, vfile_t *file);
     void (*delete)(vfile_t *file);
     void (*create)(char *filename, FS_FILE_FLAGS flags);

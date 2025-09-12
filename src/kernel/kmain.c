@@ -31,9 +31,10 @@ extern void kmain(kernel_info_t *kernel_info){
     pic_disable();
     pic_setmask(0xfe, PIC1_DATA);
     vfs_init();
+    
     fcreate("/dev", VFILE_DIRECTORY, kmalloc(1), 1);
-    fcreate("/dev/test", VFILE_POINTER, kmalloc(1), 1);
-    fcreate("/dev/test", VFILE_POINTER, kmalloc(1), 1);
+    fcreate("/tmp", VFILE_DIRECTORY, kmalloc(1), 1);
+    
     mlog("KERNEL", "Initializing Scheduler & starting PID 1\n", MLOG_PRINT);
     boot_info = kernel_info;
     scheduler_init();
