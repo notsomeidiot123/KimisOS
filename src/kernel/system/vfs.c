@@ -87,6 +87,7 @@ vfile_t *fcreate(char *name, VFILE_TYPE type, ...){
                     vfile->access.funcs.write = write;
                     vfile->access.funcs.read = read;
                     // strcpy
+                    add_file(vfile, current_dir);
                     break;
             }
             return vfile; //allow drivers to make last minute changes before it's sent to the user
@@ -97,16 +98,16 @@ vfile_t *fcreate(char *name, VFILE_TYPE type, ...){
                 break;
             case VFILE_MOUNT:
                 ((mount_t*)(tmpfile->access.data.ptr))->create(name + filename_offset, type == VFILE_DIRECTORY ? FS_FILE_IS_DIR : 0);
-                return;
+                return (void *)-1;
             default:
-            mlog(MODULE_NAME, "Error: Cannot create file with same name as another file! %d\n", MLOG_ERR, tmpfile->type);
-            return;
+            // mlog(MODULE_NAME, "Error: Cannot create file with same name as another file! %d\n", MLOG_ERR, tmpfile->type);
+            return 0;
             break;
         }
         filename_offset += strlen(tmp) + 1;
         tmp = strtok(0, '/');
     }
-    return;
+    return 0;
 }
 
 //who needs a way to delete things?
@@ -165,7 +166,7 @@ vfile_t *search_dir(char *name, vfile_t dir){
     return 0;
 }
 
-int fopen(char *name, vfile_t *file){
+int fopen(char *name, vfile_t **file){
     char *dir = strtok(name, '/');
     char *tmp = dir;
     uint32_t filename_offset = 0;
@@ -184,12 +185,12 @@ int fopen(char *name, vfile_t *file){
             case VFILE_MOUNT:
                 return ((mount_t*)(tmpfile->access.data.ptr))->open(name + filename_offset, file);
             default:
-                *file = *tmpfile;
+                *file = tmpfile;
                 return 0;
         }
         filename_offset += strlen(tmp) + 1;
         tmp = strtok(0, '/');
     }
-    *file = *tmpfile;
+    *file = tmpfile;
     return 0;
 }

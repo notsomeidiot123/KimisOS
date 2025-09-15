@@ -20,6 +20,8 @@ void sysinit(){
     mlog("KERNEL", "PID 1 Started\n", MLOG_PRINT);
     pci_init();
     modules_init(boot_info);
+    vfile_t *file;
+    //fopen shell file & execute it.
     for(;;);
 }
 extern void kmain(kernel_info_t *kernel_info){
@@ -33,7 +35,7 @@ extern void kmain(kernel_info_t *kernel_info){
     vfs_init();
     
     fcreate("/dev", VFILE_DIRECTORY, kmalloc(1), 1);
-    fcreate("/tmp", VFILE_DIRECTORY, kmalloc(1), 1);
+    fcreate("/tmp", VFILE_DIRECTORY, kmalloc(1), 1);    
     
     mlog("KERNEL", "Initializing Scheduler & starting PID 1\n", MLOG_PRINT);
     boot_info = kernel_info;

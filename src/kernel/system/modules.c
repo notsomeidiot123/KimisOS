@@ -1,6 +1,7 @@
 #include "modules.h"
 #include "../shared/kstdlib.h"
 #include "elf.h"
+#include "vfs.h"
 #include "../shared/memory.h"
 #include <stdarg.h>
 
@@ -46,19 +47,32 @@ uint32_t module_api(uint32_t func, ...){
             vmlog(name, string, MLOG_PRINT, vars);
             break;
         case MODULE_API_READ:
-            return_value = -1;
+            vfile_t *file = va_arg(vars, vfile_t *);
+            char *buffer = va_arg(vars, char *);
+            uint32_t offset = va_arg(vars, uint32_t), count = va_arg(vars, uint32_t);
+            return_value = fread(file, buffer, offset, count);
             break;
         case MODULE_API_WRITE:
-            return_value = -1;
+            file = va_arg(vars, vfile_t *);
+            buffer = va_arg(vars, char *);
+            offset = va_arg(vars, uint32_t), count = va_arg(vars, uint32_t);
+            return_value = fwrite(file, buffer, offset, count);
             break;
         case MODULE_API_CREAT:
-            return_value = -1;
+            name = va_arg(vars, char *);
+            VFILE_TYPE ftype = va_arg(vars, VFILE_TYPE);
+            void *arg1, *arg2;
+            arg1 = va_arg(vars, void *);
+            arg2 = va_arg(vars, void *);
+            return_value = (uint32_t)fcreate(name, ftype, arg1, arg2);
             break;
         case MODULE_API_DELET:
             return_value = -1;
             break;
         case MODULE_API_OPEN:
-            return_value = -1;
+            name = va_arg(vars, char *);
+            file = va_arg(vars, vfile_t *);
+            return_value = fopen(name, file);
             break;
         case MODULE_API_MAP:
             return_value = -1;

@@ -2,12 +2,13 @@
 #include <stdint.h>
 
 typedef enum vfile_type{
-    VFILE_POINTER,
+    VFILE_POINTER,//virtual files
     VFILE_DEVICE,
     VFILE_MOUNT,//in the pointer passed to the function, must specify a read, write, open, create, and delete function.
     VFILE_DIRECTORY,
     VFILE_PDIR,//used for directories in physical filesystems.
-    VFILE_FILE
+    VFILE_FILE,//physical files
+    VFILE_PIPE //yay we have pipes
 }VFILE_TYPE; 
 
 //this code is gonna be ***really*** unsafe
@@ -16,6 +17,8 @@ typedef struct virtual_file{
     VFILE_TYPE type;
     uint32_t id;//to be assigned by driver;
     uint32_t mount_id;
+    uint8_t lock;
+    uint32_t size;
     struct virtual_file *parent;//should point to A: a virtual directory, or B: a mounted filesystem
     union{
         struct{
@@ -40,7 +43,7 @@ typedef enum fs_flags{
 typedef struct mount_funcs{
     int (*write)(vfile_t *file, void *data, uint32_t offset, uint32_t count);
     int (*read)(vfile_t *file, void *data, uint32_t offset, uint32_t count);
-    int (*open)(char *filename, vfile_t *file);
+    int (*open)(char *filename, vfile_t **file);
     void (*delete)(vfile_t *file);
     void (*create)(char *filename, FS_FILE_FLAGS flags);
 }mount_t;
@@ -51,4 +54,4 @@ void fdelete();
 int fwrite(vfile_t *file_entry, void *byte_array, uint32_t offset, uint32_t count);
 int fread(vfile_t *file_entry, void *byte_array, uint32_t offset, uint32_t count);
 vfile_t *search_dir(char *name, vfile_t dir);
-int fopen(char *name, vfile_t *file);
+int fopen(char *name, vfile_t **file);
