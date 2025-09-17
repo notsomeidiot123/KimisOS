@@ -1,30 +1,12 @@
 #include<stdint.h>
 #include "modlib.h"
 #include "../kernel/drivers/cpuio.h"
+#include "../kernel/shared/string.h"
 
 #define MODULE_NAME "KIDM"
 
 KOS_MAPI_FP api;
 
-// inline void outb(uint16_t port, uint8_t data){
-//     asm volatile ("outb %0, %1" :: "a"(data), "Nd"(port));
-// }
-
-// inline void outw(uint16_t port, uint16_t data){
-//     asm volatile ("outw %0, %1" :: "a"(data), "Nd"(port));
-// }
-
-// inline uint8_t inb(uint16_t port){
-//     uint8_t byte = 0;
-//     asm volatile ("inb %1, %0" : "=a"(byte) : "Nd"(port));
-//     return byte;
-// }
-
-// inline uint16_t inw(uint16_t port){
-//     uint16_t word = 0;
-//     asm volatile ("inw %1, %0" : "=a"(word) : "Nd"(port));
-//     return word;
-// }
 /*
 TODO:
 Register module 
@@ -49,11 +31,9 @@ make fini function to destroy global object, and free any remaining resources.
 #define ATA_LBA_MID ATA_CYLINDER_LOW
 #define ATA_LBA_HIH ATA_CYLINDER_HIGH
 
-#define ATA_ALT_STATUS + 0x206
-#define ATA_DEVICE_CONTROL + 0x206
-#define ATA_DRIVE_ADDRESS + 0x207
-
-#define ATA_IDENTIFY 0xEC
+#define ATA_ALT_STATUS + 0
+#define ATA_DEVICE_CONTROL + 0
+#define ATA_DRIVE_ADDRESS + 1
 
 #define ATA_PRIMARY_BUS 0x1F0
 #define ATA_SECONDARY_BUS 0x170
@@ -95,35 +75,102 @@ make fini function to destroy global object, and free any remaining resources.
 //data address mark not found
 #define ATA_AMNF(a) a & 0x1;
 
-struct {
-    uint8_t pio_mode:1;
-    uint8_t lba48:1;
-    uint8_t drive:2;
-}settings = {1, 0, 0};
+//commands
+#define ATA_CMD_READ_PIO          0x20
+#define ATA_CMD_READ_PIO_EXT      0x24
+#define ATA_CMD_READ_DMA          0xC8
+#define ATA_CMD_READ_DMA_EXT      0x25
+#define ATA_CMD_WRITE_PIO         0x30
+#define ATA_CMD_WRITE_PIO_EXT     0x34
+#define ATA_CMD_WRITE_DMA         0xCA
+#define ATA_CMD_WRITE_DMA_EXT     0x35
+#define ATA_CMD_CACHE_FLUSH       0xE7
+#define ATA_CMD_CACHE_FLUSH_EXT   0xEA
+#define ATA_CMD_PACKET            0xA0
+#define ATA_CMD_IDENTIFY_PACKET   0xA1
+#define ATA_CMD_IDENTIFY          0xEC
+#define ATAPI_CMD_READ            0xA8
+#define ATAPI_CMD_EJECT           0x1B
+
+#define IDE_ATA        0x00
+#define IDE_ATAPI      0x01
+
+#define PCI_IDE_NATIVE(a) a & 1
+#define PCI_IDE_CAN_SET_NATIVE(a) a & 2
+#define PCI_IDE_SECONDARY_NATIVE(a) a & 4
+#define PCI_IDE_SECONDARY_CAN_SET_NATIVE(a) a & 8
+#define PCI_IDE_SUPPORT_DMA(a) (a & 0x80)
+#define PCI_CLASS_IS_IDE(a) a == 0x0101;
+
+typedef struct PRD{
+    uint32_t address;
+    uint16_t byte_count;
+    uint16_t reserved;//set msb when last;
+}__attribute__((packed)) PRD_T;
+
 
 
 void fini();
-void ata_identify();
-//return 1 if ready, 0 if not
+
+enum DRIVE_TYPE{
+    TYPE_NULL,
+    TYPE_IDE,
+    TYPE_AHCI,
+    TYPE_NVME,
+    TYPE_USB,
+    TYPE_FLOPPY, //Here, Navya, just for you
+};
+
+typedef struct drive_desc{
+    uint32_t BARs[8];
+    enum DRIVE_TYPE type;
+    uint64_t size_sectors;
+    uint32_t sector_size_bytes;
+    struct{
+        uint8_t irq_dispatched:1;
+        uint8_t huge:1;//more than 2^28 sectors
+        uint8_t locked:1;//semaphores!!!!!
+        uint8_t slave:1;//is this drive a slave drive to another drive?
+    }__attribute__((packed))flags;
+    PRD_T *PRDT;
+}drive_t;
+
+drive_t drives[32] = {0};
 
 uint16_t get_bus_from_drive(uint32_t drive){
     return drive & 2 ? ATA_SECONDARY_BUS : ATA_PRIMARY_BUS;
 }
 
-int ata_ready(uint32_t drive){
-    uint16_t bus = get_bus_from_drive(drive);
-    if(settings.drive != drive){
-        if(drive & 1){
-            outb(bus ATA_DRIVE_HEAD, drive & 1 ? 0xB0 : 0xA0);
-        }
-        for(uint32_t i = 0; i < 15; i++){
-            uint8_t _ = inb(bus ATA_ALT_STATUS);
-        }
-        settings.drive = drive;
+//return 1 if ready, 0 if not
+int ata_ready(uint32_t BAR, uint32_t BAR2, uint8_t drive){
+    if(drive){
+        outb(BAR ATA_DRIVE_HEAD, drive ? 0xB0 : 0xA0);
     }
-    uint8_t status = inb(bus ATA_ALT_STATUS);
+    for(uint32_t i = 0; i < 15; i++){
+        uint8_t _ = inb(BAR2 ATA_ALT_STATUS);
+    }
+    uint8_t status = inb(BAR2 ATA_ALT_STATUS);
     if(!ATA_BSY(status) || ATA_DRQ(status)) return 1;
     return 0;
+}
+//return index of first free drive descriptor
+uint32_t find_free_drive(){
+    for(uint32_t i = 0; i < 32; i++){
+        if(drives[i].type == TYPE_NULL){
+            return i;
+        }
+    }
+}
+
+void ide_init(uint32_t BARS[5]){
+    uint32_t index = find_free_drive();
+    drives[index].type = TYPE_IDE;
+    for(int i = 0; i < 5; i++){
+        drives[index].BARs[i] = BARS[i];
+    }
+    uint32_t paddr = api(MODULE_API_PMALLOC64K);
+    drives[index].PRDT = api(MODULE_API_KMALLOC_PADDR, paddr, 16);
+    api(MODULE_API_PRINT, MODULE_NAME, "Vaddr: %x, Paddr: %x", drives[index].PRDT, paddr);
 }
 
 void init(KOS_MAPI_FP module_api, uint32_t api_version){
@@ -140,14 +187,35 @@ void init(KOS_MAPI_FP module_api, uint32_t api_version){
         api(MODULE_API_PRINT, MODULE_NAME, "Failed to register module, exiting\n");
         return;
     }
-    ata_identify();
+    
+    vfile_t *pci_drive_dir = fopen(api, "/dev/pci/disk/");
+    vfile_t **dir_data = (pci_drive_dir->access.data.ptr);
+    for(uint32_t i = 0; dir_data[i]; i++){
+        vfile_t *current_file = dir_data[i];
+        uint32_t class = 0;
+        fread(api, current_file, &class, 0x8, 1);
+        uint32_t progif = class >> 8 & 0xff;
+        class >>= 16;
+        api(MODULE_API_PRINT, MODULE_NAME, "Class: %x, %x\n", class, progif);
+        if(class == 0x101 && PCI_IDE_SUPPORT_DMA(progif)){ //in this house, we only support DMA.
+            uint32_t BARs[5] = {0};
+            fread(api, current_file, BARs, 0x10, 5);
+            if(PCI_IDE_NATIVE(progif)){
+                BARs[0] = ATA_PRIMARY_BUS;
+                BARs[1] = ATA_PRIMARY_BUS + 0x206;
+            }
+            if(PCI_IDE_SECONDARY_NATIVE(progif)){
+                BARs[2] = ATA_SECONDARY_BUS;
+                BARs[3] = ATA_SECONDARY_BUS + 0x206;
+            }
+            ide_init(BARs);
+        }
+    }
     return;
 }
 
-void ata_identify(){
-    
-}
 
 void fini(){
-    //destroy all objects, free memory, and 
+    //destroy all objects, free memory, and exit
+    return; //nothing to do (yet)
 }

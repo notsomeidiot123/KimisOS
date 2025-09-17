@@ -71,11 +71,14 @@ uint32_t module_api(uint32_t func, ...){
             break;
         case MODULE_API_OPEN:
             name = va_arg(vars, char *);
-            file = va_arg(vars, vfile_t *);
-            return_value = fopen(name, file);
+            return_value = (uint32_t)fopen(name);
             break;
         case MODULE_API_MAP:
-            return_value = -1;
+            return_value = 0;
+            void *vaddr = va_arg(vars, void *);
+            void *paddr = va_arg(vars, void *);
+            uint32_t flags = va_arg(vars, uint32_t);
+            map(vaddr, paddr, flags);
             break;
         case MODULE_API_UNMAP:
             return_value = -1;
@@ -92,6 +95,14 @@ uint32_t module_api(uint32_t func, ...){
             void *ptr = va_arg(vars, void *);
             kfree(ptr);
             return_value = 0;
+            break;
+        case MODULE_API_PMALLOC64K:
+            return_value = pm_alloc_64kaligned();
+            break;
+        case MODULE_API_KMALLOC_PADDR:
+            paddr = va_arg(vars, uint32_t);
+            uint32_t size = va_arg(vars, uint32_t);
+            return_value = kmalloc_page_paddr((uint32_t)paddr, size);
             break;
         
     }

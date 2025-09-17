@@ -43,7 +43,7 @@ typedef enum fs_flags{
 typedef struct mount_funcs{
     int (*write)(vfile_t *file, void *data, uint32_t offset, uint32_t count);
     int (*read)(vfile_t *file, void *data, uint32_t offset, uint32_t count);
-    int (*open)(char *filename, vfile_t **file);
+    int (*open)(char *filename, vfile_t *file);
     void (*delete)(vfile_t *file);
     void (*create)(char *filename, FS_FILE_FLAGS flags);
 }mount_t;
@@ -54,4 +54,4 @@ void fdelete();
 int fwrite(vfile_t *file_entry, void *byte_array, uint32_t offset, uint32_t count);
 int fread(vfile_t *file_entry, void *byte_array, uint32_t offset, uint32_t count);
 vfile_t *search_dir(char *name, vfile_t dir);
-int fopen(char *name, vfile_t **file);
+vfile_t *fopen(char *name);

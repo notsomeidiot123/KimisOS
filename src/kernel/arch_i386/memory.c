@@ -24,6 +24,34 @@ uint32_t pm_alloc(){
         }
     }
 }
+uint32_t pm_alloc_index(uint32_t index){
+    for(uint32_t i = index; i < 2; i++){
+        for(int j = 0; j < 8; j++){
+            // if(!(pm_map[i] & (1 << j))){
+            pm_map[i] |= (1 << j);
+                // }
+        }
+    }
+    return (index << 3) << 12;
+}
+uint32_t pm_alloc_64kaligned(){
+    uint32_t cont = 0;
+    for(uint32_t i = 0; i < mmap_count; i++){
+        for(int j = 0; j < 8; j++){
+            if(!(pm_map[i] & (1 << j))){
+                continue;
+            }else{
+                j++;
+                cont = -1;
+                break;
+            }
+        }
+        if(cont == 1){
+            return pm_alloc_index(i);
+        }
+        cont++;
+    }
+}
 void pm_free(uint32_t address){
     pm_map[address >> 15] &= ~(1 << ((address>>12) & 7));
 }
@@ -159,6 +187,34 @@ void *kmalloc(uint32_t size_pgs){
         for(uint32_t j = 0; j < size_pgs; j++){
             uint32_t flags = PT_PRESENT | PT_SYS | (PT_LINK_L * (j != 0)) | (PT_LINK_N * (j < (size_pgs - 1)));
             uint32_t physaddr = pm_alloc();
+            // if(j == 0) printf("%x", physaddr);
+            // printf("Mapping %x to %x\n", (i + j) << 12, physaddr);
+            // if(fake) return 0;
+            map((void *)((i + j) << 12), (void*)physaddr, flags);
+        }
+        // fake = !fake;
+        // for(;;);
+        return (void*)(i << 12);
+    }
+}
+void *kmalloc_page_paddr(uint32_t paddr, uint32_t size_pgs){
+    uint32_t i = 0xc0000000 >> 12; //4mb/4096 (start search at 1mb line)
+    while(i < (1 << 22)){
+        uint8_t found = 1;
+        for(uint32_t j = 0; j < size_pgs; j++){
+            // printf("found at %x, %x\n", (i + j) << 12, get_paddr((void*)((i + j) << 12)));
+            if(get_pflags((void *)((i + j) << 12))){
+                found = 0;
+                break;
+            }
+        }
+        if(!found){
+            i++;
+            continue;
+        }
+        for(uint32_t j = 0; j < size_pgs; j++){
+            uint32_t flags = PT_PRESENT | PT_SYS | (PT_LINK_L * (j != 0)) | (PT_LINK_N * (j < (size_pgs - 1)));
+            uint32_t physaddr = paddr + j * 4096;
             // if(j == 0) printf("%x", physaddr);
             // printf("Mapping %x to %x\n", (i + j) << 12, physaddr);
             // if(fake) return 0;

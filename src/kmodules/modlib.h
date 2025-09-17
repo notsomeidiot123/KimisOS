@@ -17,6 +17,8 @@
 #define MODULE_API_PADDR 13 //get physical address of memory
 #define MODULE_API_MALLOC 14 //allocate memory in 4kb blocks
 #define MODULE_API_FREE 15 //free memory allocated by malloc
+#define MODULE_API_PMALLOC64K 16 //get 64k-aligned pages
+#define MODULE_API_KMALLOC_PADDR 17
 
 typedef uint32_t (*KOS_MAPI_FP)(unsigned int function, ...);
 typedef struct module{
@@ -40,15 +42,42 @@ typedef struct virtual_file{
     VFILE_TYPE type;
     uint32_t id;//to be assigned by driver;
     uint32_t mount_id;
+    uint8_t lock;
+    uint32_t size;
+    struct virtual_file *parent;//should point to A: a virtual directory, or B: a mounted filesystem
     union{
         struct{
-            void (*read)(struct virtual_file *file, void *data, uint32_t offset, uint32_t count);
-            void (*write)(struct virtual_file *file, void *data, uint32_t offset, uint32_t count);
+            int (*read)(struct virtual_file *file, void *data, uint32_t offset, uint32_t count);
+            int (*write)(struct virtual_file *file, void *data, uint32_t offset, uint32_t count);
         }funcs;
         struct{
             void *ptr;
-            uint16_t size_pgs;
-            uint16_t free_bytes;
+            uint32_t size_pgs;
         }__attribute__((packed))data;
     }access;
 }vfile_t;
+
+inline void *malloc(KOS_MAPI_FP api, uint32_t size_pages){
+    return (void *)api(MODULE_API_MALLOC, size_pages);
+}
+inline void *free(KOS_MAPI_FP api, void *ptr){
+    api(MODULE_API_FREE, ptr);
+    return 0;
+}
+inline vfile_t *fopen(KOS_MAPI_FP api, char *filename){
+    // vfile_t *file = malloc(api, 1);
+    return (void *)api(MODULE_API_OPEN, filename);
+}
+inline int fread(KOS_MAPI_FP api, vfile_t *file, char *buffer, uint32_t offset, uint32_t count){
+    return api(MODULE_API_READ, file, buffer, offset, count);
+}
+inline int fwrite(KOS_MAPI_FP api, vfile_t *file, char *buffer, uint32_t offset, uint32_t count){
+    return api(MODULE_API_WRITE, file, buffer, offset, count);
+}
+//read documenation for this one
+inline vfile_t *fcreate(KOS_MAPI_FP api, char *filename, VFILE_TYPE type, char *pointer_write, char *size_read){
+    return (void *)api(MODULE_API_CREAT, filename, type, pointer_write, size_read);
+}
+inline void puts(KOS_MAPI_FP api, char *mname, char *str){
+    api(MODULE_API_PRINT, mname, str);
+};

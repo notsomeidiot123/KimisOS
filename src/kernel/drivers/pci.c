@@ -25,13 +25,20 @@ uint16_t pci_read_config(uint32_t bus, uint32_t slot, uint32_t func, uint8_t off
     uint16_t tmp = (uint16_t)((inl(0xcfc) >> ((offset & 2) * 8)) & 0xffff);
     return tmp;
 }
+uint16_t pci_write_config(uint32_t bus, uint32_t slot, uint32_t func, uint8_t offset, uint16_t word){
+    uint32_t address = (uint32_t)((bus << 16) | (slot << 11) | (func << 8) | (offset & 0xfc) | ((uint32_t)0x80000000));
+    outl(0xcf8, address);
+    outl(0xcfc, word);
+    return 0;
+}
+
 
 void pci_read_file(vfile_t *file, uint32_t *buffer, uint32_t offset, uint32_t count){
     uint8_t bus = file->id >> 16;
     uint8_t func = file->id>> 8 & 0xff;
     uint8_t slot = file->id & 0xff;
-    for(uint32_t i = 0; i < count/2; i++){
-        buffer[i] = pci_read_config(bus, slot, func, offset + i*2) | (pci_read_config(bus, slot, func, offset + i * 2 + 2) << 16);
+    for(uint32_t i = 0; i < (count); i++){
+        buffer[i] = pci_read_config(bus, slot, func, offset + i*4) | (pci_read_config(bus, slot, func, offset + i*4 + 2) << 16);
     }
     return;
 }
@@ -45,6 +52,9 @@ void pci_make_file(uint32_t class, uint8_t bus, uint8_t slot, uint8_t func){
     switch(class >> 8){
         case 0x1://PCI class 0x1 is disks
         strcpy("disk/", str + strlen(str));
+        uint32_t l = (uint32_t)pci_read_config(bus, slot, func, 0x4) | (uint32_t)pci_read_config(bus, slot, func, 0x6) << 16;
+        pci_write_config(bus, slot, func, 0x4, l | 2);
+        
         break;
         case 0x2://PCI class 0x2 is network controllers
         strcpy("net/", str + strlen(str));

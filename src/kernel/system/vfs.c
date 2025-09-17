@@ -18,6 +18,7 @@ void add_file(vfile_t *vfile, vfile_t *current_dir){
         i++;
     }
     dir_data[i] = vfile;
+    dir_data[i + 1] = 0;
 }
 /*
 Long comment cause this one's a complicated one.
@@ -77,8 +78,8 @@ vfile_t *fcreate(char *name, VFILE_TYPE type, ...){
                     void *ptr = va_arg(args, void*);
                     vfile->access.data.ptr = ptr;
                     vfile->access.data.size_pgs = va_arg(args, uint32_t);
+                    *(uint32_t *)ptr = 0;
                     add_file(vfile, current_dir);
-                    // printf("Created File: %s\n", vfile->name);
                     break;
                 case VFILE_FILE:
                 case VFILE_DEVICE:
@@ -166,8 +167,16 @@ vfile_t *search_dir(char *name, vfile_t dir){
     return 0;
 }
 
-int fopen(char *name, vfile_t **file){
+vfile_t *fopen(char *name){
+    if(name[0] == '/'){
+        name++;
+    }
+    if(name[strlen(name) - 1] == '/'){
+        name[strlen(name) - 1] = 0;
+    }
+    printf("%s\n", name);
     char *dir = strtok(name, '/');
+    printf("%s", name);
     char *tmp = dir;
     uint32_t filename_offset = 0;
     vfile_t *current_dir = &root_dir; 
@@ -176,21 +185,23 @@ int fopen(char *name, vfile_t **file){
         dir = tmp;
         tmpfile = search_dir(tmp, *current_dir);
         if(!tmpfile){
-            return -1;
+            printf("not found\n");
+            return 0;
         }
         switch(tmpfile->type){
             case VFILE_DIRECTORY:
+                printf("found directory in %s: %s\n", current_dir->name, tmpfile->name);
                 current_dir = tmpfile;
                 break;
             case VFILE_MOUNT:
-                return ((mount_t*)(tmpfile->access.data.ptr))->open(name + filename_offset, file);
+                vfile_t *file = kmalloc(1);
+                ((mount_t*)(tmpfile->access.data.ptr))->open(name + filename_offset, file);
+                return file;
             default:
-                *file = tmpfile;
-                return 0;
+                return tmpfile;
         }
         filename_offset += strlen(tmp) + 1;
         tmp = strtok(0, '/');
     }
-    *file = tmpfile;
-    return 0;
+    return tmpfile;
 }

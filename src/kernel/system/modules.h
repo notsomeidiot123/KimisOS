@@ -25,6 +25,8 @@
 #define MODULE_API_PADDR 13 //get physical address of memory
 #define MODULE_API_MALLOC 14 //allocate memory in 4kb blocks
 #define MODULE_API_FREE 15 //free memory allocated by malloc
+#define MODULE_API_PMALLOC64K 16
+#define MODULE_API_KMALLOC_PADDR 17
 
 typedef struct module{
     void *init_entry;
