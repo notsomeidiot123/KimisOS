@@ -16,16 +16,16 @@ CREATE interface when reading and writing from virtual files
 make fini function to destroy global object, and free any remaining resources.
 */
 
-#define ATA_DATA + 0
-#define ATA_ERROR + 1
-#define ATA_FEATURES + 1
-#define ATA_SECTOR_COUNT + 2
-#define ATA_SECTOR_NUMBER + 3
-#define ATA_CYLINDER_LOW + 4
-#define ATA_CYLINDER_HIGH + 5
-#define ATA_DRIVE_HEAD + 6
-#define ATA_STATUS + 7
-#define ATA_COMMAND + 7
+#define ATA_DATA          0
+#define ATA_ERROR         1
+#define ATA_FEATURES      1
+#define ATA_SECTOR_COUNT  2
+#define ATA_SECTOR_NUMBER 3
+#define ATA_CYLINDER_LOW  4
+#define ATA_CYLINDER_HIGH 5
+#define ATA_DRIVE_HEAD    6
+#define ATA_STATUS        7
+#define ATA_COMMAND       7
 
 #define ATA_LBA_LOW ATA_SECTOR_NUMBER
 #define ATA_LBA_MID ATA_CYLINDER_LOW
@@ -150,13 +150,13 @@ int ata_ready(uint32_t BAR, uint32_t BAR2, uint8_t drive){
     if(last_disk != drive && last_bar != BAR){
         last_disk = drive;
         last_bar == BAR;
-        outb(BAR ATA_DRIVE_HEAD, drive);
+        outb(BAR + ATA_DRIVE_HEAD, drive);
     }
-    for(uint32_t i = 0; i < 15; i++){
-        uint8_t _ = inb(BAR2 ATA_STATUS);
+    for(uint32_t i = 0; i < 4; i++){
+        uint8_t _ = inb(BAR2 + ATA_STATUS);
     }
     uint8_t status = inb(BAR2 ATA_ALT_STATUS);
-    return ~(status >> 7);
+    return (status >> 7) == 0;
 }
 void ata_reset(uint16_t bar1){
     outw(bar1 ATA_DEVICE_CONTROL, 0x4);
@@ -182,38 +182,43 @@ uint32_t find_free_drive(){
 uint8_t ata_identify(uint32_t index, uint16_t disk){
     uint16_t bar0 = drives[index].BARs[0] >> 2;
     uint16_t bar1 = drives[index].BARs[1] >> 2;
-    while(!ata_ready(bar0, bar1, disk)){
-        asm volatile ("" ::: "memory");
-    }
-    outb(bar0 ATA_DRIVE_HEAD, disk);
-    outw(bar0 ATA_SECTOR_COUNT, 0);
-    outw(bar0 ATA_LBA_HIH, 0);
-    outw(bar0 ATA_LBA_MID, 0);
-    outw(bar0 ATA_LBA_LOW, 0);
-    outw(bar0 ATA_COMMAND, ATA_CMD_IDENTIFY);
-    
-    uint16_t identify[256] = {0};
-    uint8_t status = inb(bar0 ATA_STATUS);
-    if(!status){
+    if(!ata_ready(bar0, bar1, disk)){
         return -1;
     }
-    while(ATA_BSY(status)){
-        asm volatile ("":::"memory"); //prevent gcc from optimizing out this loop
-        if(inw(bar0 ATA_LBA_MID)){
-            return -1;//we don't support ATAPI and SATAPI yet
-        }
-        status = inw(bar0 ATA_STATUS);
-        if(ATA_ERR(status)){
-            return -1;
-        }
+    // outb(bar0 ATA_DRIVE_HEAD, disk);
+    outb(bar0 + ATA_SECTOR_COUNT, 0);
+    outb(bar0 + ATA_LBA_LOW, 0);
+    outb(bar0 + ATA_LBA_MID, 0);
+    outb(bar0 + ATA_LBA_HIH, 0);
+    outb(bar0 + ATA_COMMAND, ATA_CMD_IDENTIFY);
+    
+    uint8_t status = inb(bar0 + ATA_STATUS);
+    if (status == 0x00) return -1; // No device
+
+    while (ATA_BSY(status)) {
+        status = inb(bar0 + ATA_STATUS);
+        if (ATA_ERR(status)) return -1;
     }
+
+    // Check device signature for non-ATA devices
+    uint8_t lba_mid  = inb(bar0 + ATA_LBA_MID);
+    uint8_t lba_high = inb(bar0 + ATA_LBA_HIH);
+    if (lba_mid != 0 || lba_high != 0) {
+        return -1; // Not an ATA device or no device
+    }
+
+    // Check for DRQ
+    status = inb(bar0 + ATA_STATUS);
+    if (!(ATA_DRQ(status))) return -1;
+    
+    uint16_t identify[256] = {0};
     for(uint16_t i = 0; i < 256; i++){
-        identify[i] = inw(bar0 ATA_DATA);
+        identify[i] = inw(bar0 + ATA_DATA);
     }
     // drives[index].size_sectors
     uint32_t lba48 = (identify[83] & (1 << 10));
     drives[index].flags.huge = lba48 ? 1 : 0;
-    drives[index].size_sectors = lba48 ? (identify[60] | (identify[61] << 16)) : ((uint64_t)(identify[100]) | (uint64_t)(identify[101] << 16) | ((uint64_t)identify[102] << 32));
+    drives[index].size_sectors = !lba48 ? (identify[60] | (identify[61] << 16)) : ((uint64_t)(identify[100]) | (uint64_t)(identify[101] << 16) | ((uint64_t)identify[102] << 32));
     api(MODULE_API_PRINT, MODULE_NAME, "Sector Count: %x\n", drives[index].size_sectors);
     
     return 1;
