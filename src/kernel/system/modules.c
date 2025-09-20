@@ -100,9 +100,9 @@ uint32_t module_api(uint32_t func, ...){
             return_value = pm_alloc_64kaligned();
             break;
         case MODULE_API_KMALLOC_PADDR:
-            paddr = va_arg(vars, uint32_t);
+            paddr = (void *)va_arg(vars, uint32_t);
             uint32_t size = va_arg(vars, uint32_t);
-            return_value = kmalloc_page_paddr((uint32_t)paddr, size);
+            return_value = (uint32_t)kmalloc_page_paddr((uint32_t)paddr, size);
             break;
         
     }
