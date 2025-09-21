@@ -119,6 +119,26 @@ void kernel_panic(char *message, cpu_registers_t *regs){
 void install_irq_handler(void (*handler)(), uint8_t irqno){
     interrupt_handlers[irqno] = handler;
 }
+void pit_reload(uint8_t mode, uint16_t reload){
+    const uint16_t PIT_CMD = 0x43;
+    const uint16_t PIT_DATA = 0x40;
+    outb(PIT_CMD, 0b00110000 + mode); //channel 0, low/high byte, rate generator mode
+    
+    outb(PIT_DATA, reload >> 8);
+    outb(PIT_DATA, reload & 0xff);
+    return;
+}
+void pit_init(uint32_t freq){
+    uint32_t reload_value = 0x10000;
+    if(freq <= 18){
+        pit_reload(0b100, reload_value);
+    }
+    if(freq >= 1193181){
+        pit_reload(0b100, reload_value >> 16);
+    }
+    reload_value = ((3579545 * 256)/(3 * 256))/(freq);
+    pit_reload(0b100, reload_value);
+}
 
 void idt_load(){
     // for(uint32_t i = 0; i < 32; i++){
@@ -169,6 +189,8 @@ void idt_load(){
     for(int i = 0; i < 16; i++){
         interrupt_handlers[i] = 0;
     }
+    
+    pit_init(1193181);
     // asm volatile("lidt (%0)" : : "m"(&idt_desc));
     // outb(0x20, 0x11 );
     // outb(0xa0, 0x11);

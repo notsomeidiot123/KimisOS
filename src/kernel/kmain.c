@@ -36,8 +36,6 @@ extern void kmain(kernel_info_t *kernel_info){
     
     fcreate("/dev", VFILE_DIRECTORY, kmalloc(1), 1);
     fcreate("/tmp", VFILE_DIRECTORY, kmalloc(1), 1);
-    vfile_t *file = fopen("/dev");
-    printf("%x", file);
     mlog("KERNEL", "Initializing Scheduler & starting PID 1\n", MLOG_PRINT);
     boot_info = kernel_info;
     scheduler_init();

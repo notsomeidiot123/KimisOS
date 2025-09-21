@@ -30,7 +30,7 @@ void scheduler_init(){
     install_irq_handler(schedule, 0);
     // printf("Installing scheduler");
 }
-
+uint32_t timer = 0;
 cpu_registers_t *schedule(cpu_registers_t *regs){
     // if(queue_length == 0){
     //     return regs;

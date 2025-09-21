@@ -174,9 +174,9 @@ vfile_t *fopen(char *name){
     if(name[strlen(name) - 1] == '/'){
         name[strlen(name) - 1] = 0;
     }
-    printf("%s\n", name);
+    // printf("%s\n", name);
     char *dir = strtok(name, '/');
-    printf("%s", name);
+    // printf("%s", name);
     char *tmp = dir;
     uint32_t filename_offset = 0;
     vfile_t *current_dir = &root_dir; 
@@ -185,12 +185,12 @@ vfile_t *fopen(char *name){
         dir = tmp;
         tmpfile = search_dir(tmp, *current_dir);
         if(!tmpfile){
-            printf("not found\n");
+            // printf("not found\n");
             return 0;
         }
         switch(tmpfile->type){
             case VFILE_DIRECTORY:
-                printf("found directory in %s: %s\n", current_dir->name, tmpfile->name);
+                // printf("found directory in %s: %s\n", current_dir->name, tmpfile->name);
                 current_dir = tmpfile;
                 break;
             case VFILE_MOUNT:
