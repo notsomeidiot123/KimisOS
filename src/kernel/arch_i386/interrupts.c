@@ -128,16 +128,25 @@ void pit_reload(uint8_t mode, uint16_t reload){
     outb(PIT_DATA, reload & 0xff);
     return;
 }
-void pit_init(uint32_t freq){
+uint32_t pit_init(uint32_t freq){
     uint32_t reload_value = 0x10000;
     if(freq <= 18){
         pit_reload(0b100, reload_value);
+        uint32_t ms = (reload_value * 3000)/3579545;
+        return ms;
     }
     if(freq >= 1193181){
         pit_reload(0b100, reload_value >> 16);
+        uint32_t ms = (reload_value * 3000)/3579545;
+        return ms;
     }
-    reload_value = ((3579545 * 256)/(3 * 256))/(freq);
+    
+    reload_value = ((3579545)/(freq));
+    reload_value /= 3;
     pit_reload(0b100, reload_value);
+    printf("%d\n", reload_value);
+    uint32_t ms = (reload_value * 3000)/3579545;
+    return ms;
 }
 
 void idt_load(){
@@ -190,7 +199,8 @@ void idt_load(){
         interrupt_handlers[i] = 0;
     }
     
-    pit_init(1193181);
+    uint32_t hz_ms = pit_init(50000);
+    printf("%d\n", hz_ms);
     // asm volatile("lidt (%0)" : : "m"(&idt_desc));
     // outb(0x20, 0x11 );
     // outb(0xa0, 0x11);
