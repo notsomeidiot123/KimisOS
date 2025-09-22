@@ -33,6 +33,8 @@ typedef struct module{
     uint32_t id;
     char name[16];
     uint8_t flags;
+    uint16_t interrupts;
+    uint32_t key;
     void (*fini)(void);
 }module_t;
 

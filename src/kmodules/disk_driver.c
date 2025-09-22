@@ -2,6 +2,7 @@
 #include "modlib.h"
 #include "../kernel/drivers/cpuio.h"
 #include "../kernel/shared/string.h"
+#include "disk_driver.h"
 
 #define MODULE_NAME "KIDM"
 
@@ -109,6 +110,16 @@ typedef struct PRD{
     uint16_t byte_count;
     uint16_t reserved;//set msb when last;
 }__attribute__((packed)) PRD_T;
+
+module_t module_data = {
+    init,
+    0xfae00000,
+    MODULE_NAME,
+    0,
+    0,
+    0,
+    fini
+};
 
 uint8_t native_ide_present = 0;
 
@@ -274,18 +285,13 @@ void ide_init(uint32_t BARS[5]){
 void init(KOS_MAPI_FP module_api, uint32_t api_version){
     api = module_api;
     api(MODULE_API_PRINT, MODULE_NAME, "KIDM Storage Driver Module v0.1.0\nSupported interfaces: \n");
-    module_t module_data = {
-        init,
-        0xfae00000,
-        "KIDM OFFICIAL 01",
-        0
-    };
+    
     int status = api(MODULE_API_REGISTER, &module_data);
     if(status){
         api(MODULE_API_PRINT, MODULE_NAME, "Failed to register module, exiting\n");
         return;
     }
-    
+    api(MODULE_API_PRINT, MODULE_NAME, "Key Test: %x", module_data.key);
     vfile_t *pci_drive_dir = fopen(api, "/dev/pci/disk/");
     vfile_t **dir_data = (pci_drive_dir->access.data.ptr);
     for(uint32_t i = 0; dir_data[i]; i++){

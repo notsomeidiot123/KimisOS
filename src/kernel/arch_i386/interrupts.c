@@ -144,7 +144,6 @@ uint32_t pit_init(uint32_t freq){
     reload_value = ((3579545)/(freq));
     reload_value /= 3;
     pit_reload(0b100, reload_value);
-    printf("%d\n", reload_value);
     uint32_t ms = (reload_value * 3000)/3579545;
     return ms;
 }
@@ -200,7 +199,6 @@ void idt_load(){
     }
     
     uint32_t hz_ms = pit_init(50000);
-    printf("%d\n", hz_ms);
     // asm volatile("lidt (%0)" : : "m"(&idt_desc));
     // outb(0x20, 0x11 );
     // outb(0xa0, 0x11);

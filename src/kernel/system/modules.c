@@ -17,11 +17,14 @@ uint32_t module_api(uint32_t func, ...){
     switch(func){
         case MODULE_API_REGISTER:
             //do something
-            void *structure = va_arg(vars, void *);
+            module_t *structure = va_arg(vars, void *);
             if(structure == 0){
                 return -1;
             }
             vector_push(modules, structure);
+            uint32_t tmp = pm_alloc();
+            (structure->key) = (modules->size ^ 190507) + tmp << 12 ^ 4405648937 ^ 8592807313 >> 5;
+            pm_free(tmp);
             return 0;
             break;
         case MODULE_API_ADDFUNC:
@@ -33,12 +36,11 @@ uint32_t module_api(uint32_t func, ...){
             return_value = -1;
             break;
         case MODULE_API_ADDINT:
-            return_value = -1;
+            uint32_t int_index = va_arg(vars, uint32_t);
             //do something
             break;
         case MODULE_API_DELINT:
-            //do something
-            return_value = -1;
+            int_index = va_arg(vars, uint32_t);
             break;
         case MODULE_API_PRINT:
             // vmlog(MODULE_NAME, "Testing modules calling kernel functions\n", MLOG_PRINT, vars);
@@ -81,7 +83,8 @@ uint32_t module_api(uint32_t func, ...){
             map(vaddr, paddr, flags);
             break;
         case MODULE_API_UNMAP:
-            return_value = -1;
+            vaddr = va_arg(vars, void *);
+            unmap(vaddr);
             break;
         case MODULE_API_PADDR:
             void *addr = va_arg(vars, void *);
