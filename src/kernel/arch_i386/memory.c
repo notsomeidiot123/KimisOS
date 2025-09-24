@@ -148,7 +148,7 @@ uint32_t get_paddr(void *vaddr){
         return 0;
     }
     uint32_t *pt = (uint32_t *)(0xffc00000 + (pd_index * 0x1000));
-    return pt[pt_index];
+    return pt[pt_index] & 0xfffff000;
 }
 uint32_t get_pflags(void *vaddr){
     uint32_t pd_index = (uint32_t)vaddr >> 22;
@@ -185,7 +185,7 @@ void *kmalloc(uint32_t size_pgs){
             continue;
         }
         for(uint32_t j = 0; j < size_pgs; j++){
-            uint32_t flags = PT_PRESENT | PT_SYS | (PT_LINK_L * (j != 0)) | (PT_LINK_N * (j < (size_pgs - 1)));
+            uint32_t flags = PT_PRESENT | PT_SYS | (PT_LINK_L * (j != 0)) | (PT_LINK_N * (j < (size_pgs - 1)) | PT_PCD);
             uint32_t physaddr = pm_alloc();
             // if(j == 0) printf("%x", physaddr);
             // printf("Mapping %x to %x\n", (i + j) << 12, physaddr);
@@ -213,7 +213,7 @@ void *kmalloc_page_paddr(uint32_t paddr, uint32_t size_pgs){
             continue;
         }
         for(uint32_t j = 0; j < size_pgs; j++){
-            uint32_t flags = PT_PRESENT | PT_SYS | (PT_LINK_L * (j != 0)) | (PT_LINK_N * (j < (size_pgs - 1)));
+            uint32_t flags = PT_PRESENT | PT_SYS | (PT_LINK_L * (j != 0)) | (PT_LINK_N * (j < (size_pgs - 1)) | PT_PCD);
             uint32_t physaddr = paddr + j * 4096;
             // if(j == 0) printf("%x", physaddr);
             // printf("Mapping %x to %x\n", (i + j) << 12, physaddr);

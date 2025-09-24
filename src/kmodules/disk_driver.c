@@ -134,7 +134,12 @@ enum DRIVE_TYPE{
     TYPE_USB,
     TYPE_FLOPPY, //Here, Navya, just for you
 };
+
+
 uint32_t volatile transferring_disk_index = -1;
+uint32_t expected_ints = 0;
+uint32_t recieved_ints = 0;
+
 typedef struct drive_desc{
     uint32_t BARs[8];
     enum DRIVE_TYPE type;
@@ -183,79 +188,79 @@ uint32_t find_free_drive(){
     }
 }
 
-int ata_read(vfile_t *file, uint8_t *ptr, uint32_t offset, uint32_t count){
-    if(count == 0){
-        return -1;//prevent from accidentally reading 65536 * 512 bytes
-    }
-    
+int ata_read(vfile_t *file, uint8_t *ptr, uint32_t offset, uint32_t count) {
+    if (count == 0) return -1;
+
     drive_t drive = drives[file->mount_id];
-    
-    uint16_t dmabar = drive.BARs[4] & (uint32_t)(~3);
-    
-    uint32_t status = inb(dmabar + 2);
-    api(MODULE_API_PRINT, MODULE_NAME, "status: %x\n", status);
+    uint16_t io_base = drive.BARs[0] >> 2;
+    uint16_t ctrl_base = drive.BARs[1] >> 2;
+    uint16_t bm_base = drive.BARs[4] & ~3;
+
+    uint32_t sector_count = count >> 9;
+    if (sector_count == 0) return 0;
+
     PRD_T *prdt = drive.PRDT;
-    if(count == 0) return 0;
-    uint32_t count_pgs = ((count + 4096) / 4096);
-    
-    for(int i = 0; i < count_pgs; i++){
-        prdt[i].address = api(MODULE_API_PADDR, ptr + (i * (1 << 12)));
-        prdt[i].byte_count = (i == (count_pgs - 1)) ? count % (1 << 12) : 1 << 12;
-        prdt[i].reserved = (1 << 31) * (i == (count_pgs - 1));
+    uint32_t pages = (count + 4095) / 4096;
+    for (uint32_t i = 0; i < pages; i++) {
+        prdt[i].address = api(MODULE_API_PADDR, ptr + (i << 12));
+        api(MODULE_API_PRINT, MODULE_NAME, "ADDR: %x, %x", ptr + (i << 12), api(MODULE_API_PADDR, prdt));
+        prdt[i].byte_count = (i == (pages - 1)) ? (count % 4096) : 4096;
+        prdt[i].reserved = (i == (pages - 1)) ? (1 << 31) : 0;
+        
     }
-    outb(dmabar + 2, 0x6);
-    outl(dmabar + 4, api(MODULE_API_PADDR, prdt));
-    outb(dmabar, 0x8);
+
+    outb(ctrl_base, 0x00);
+    outb(bm_base + 2, 0x06);
+    outl(bm_base + 4, api(MODULE_API_PADDR, prdt));
+    outb(bm_base, 0x08);
     
-    while(!ata_ready(drive.BARs[0] >> 2, drive.BARs[1] >> 2, drive.flags.slave));
+    while(!ata_ready(io_base, ctrl_base, drive.flags.slave << 4));
+    // uint64_t lba = offset >> 9;
+    uint64_t lba = 0;
+    outb(io_base + ATA_DRIVE_HEAD, 0x40 | (drive.flags.slave << 4) | ((lba >> 24) & 0x0F));
     
-    outb(drive.BARs[1], 0x00);
-    
-    uint64_t lba = (offset >> 9);
-    uint8_t *lba_arr = &lba;
-    outb(drive.BARs[0] + ATA_DRIVE_HEAD, 0x40 | (drive.flags.slave << 4) | ((lba >> 24) * !drive.flags.huge));
-    
-    if(count >> 9 == 0){
-        return 0;
+    if (drive.flags.huge) {
+        // 48-bit LBA (use READ_DMA_EXT)
+        outb(io_base + ATA_SECTOR_COUNT, sector_count >> 8);
+        outb(io_base + ATA_LBA_LOW,     (lba >> 24) & 0xFF);
+        outb(io_base + ATA_LBA_MID,     (lba >> 32) & 0xFF);
+        outb(io_base + ATA_LBA_HIH,    (lba >> 40) & 0xFF);
+        outb(io_base + ATA_SECTOR_COUNT, sector_count & 0xFF);
+        outb(io_base + ATA_LBA_LOW,     lba & 0xFF);
+        outb(io_base + ATA_LBA_MID,     (lba >> 8) & 0xFF);
+        outb(io_base + ATA_LBA_HIH,    (lba >> 16) & 0xFF);
+        outb(io_base + ATA_COMMAND, ATA_CMD_READ_DMA_EXT);
+    } else {
+        // 28-bit LBA (use READ_DMA)
+        outb(io_base + ATA_SECTOR_COUNT, sector_count);
+        outb(io_base + ATA_LBA_LOW,     lba & 0xFF);
+        outb(io_base + ATA_LBA_MID,     (lba >> 8) & 0xFF);
+        outb(io_base + ATA_LBA_HIH,    (lba >> 16) & 0xFF);
+        outb(io_base + ATA_COMMAND, ATA_CMD_READ_DMA);
     }
-    
-    if(drive.flags.huge){
-        outb(drive.BARs[0] + ATA_SECTOR_COUNT, (count >> 9) >> 8);
-    }else{
-        outb(drive.BARs[0] + ATA_SECTOR_COUNT, (count >> 9));
-    }
-    for(uint32_t i = 0; i < 3; i++){
-        outb(drive.BARs[0] + ATA_LBA_LOW + i, lba_arr[i + 3 * drive.flags.huge]);
-    }
-    if(drive.flags.huge){
-        outb(drive.BARs[0] + ATA_SECTOR_COUNT, (count >> 9) & 0xff);
-        for(uint32_t i = 0; i < 3; i++){
-            outb(drive.BARs[0] + ATA_LBA_LOW + i, lba_arr[i]);
-        }
-        puts(api, MODULE_NAME, "bleh\n");
-        outb(drive.BARs[0] + ATA_COMMAND, ATA_CMD_READ_DMA_EXT);
-    }else{
-        outb(drive.BARs[0] + ATA_COMMAND, ATA_CMD_READ_DMA);
-    }
-    //issue read command to drive
+    expected_ints = pages;
+    recieved_ints = 0;
     
     transferring_disk_index = file->mount_id;
     
-    outb(dmabar, 0x9);
-    // while(!ata_ready(drive.BARs[0] >> 2, drive.BARs[1] >> 2, drive.flags.slave));
-    while(transferring_disk_index != -1);
-    // while (!(inb(dmabar + 2) & 0x01));
-    outb(dmabar, 0x0);
+    outb(bm_base, 0x09);
+    while (transferring_disk_index != -1);
+    outb(bm_base, 0x00);
+    
     return 0;
 }
 
 cpu_registers_t *int_handler(cpu_registers_t * regs){
-    puts(api, MODULE_NAME, "Interrupt called");
     drive_t drive = drives[transferring_disk_index];
     uint16_t dmabar = drive.BARs[4] & (uint32_t)(~3);
     uint32_t status = inb(dmabar + 2);
+    outb(dmabar + 2, 0x4);
+    recieved_ints++;
+    api(MODULE_API_PRINT, MODULE_NAME, "Interrupt called, %x\n", status);
+    // if(status & 1){
+    //     return regs;
+    // }
     transferring_disk_index = -1;
-    if(status & 0x4) return regs;
     return regs;
 }
 
@@ -264,7 +269,28 @@ int ata_write(vfile_t *file, void *ptr, uint32_t offset, uint32_t count){
     
 }
 
-
+//dma set 0x80 for udma
+//
+void ata_set_dma(uint32_t index, uint8_t dma_mode){
+    uint16_t bar0 = drives[index].BARs[0] >> 2;
+    uint16_t bar1 = drives[index].BARs[1] >> 2;
+    
+    while(!ata_ready(bar0, bar1, drives[index].flags.slave << 4));
+    
+    outb(bar0 + ATA_FEATURES, 0x3);
+    uint8_t dma_set = ((dma_mode & 0x80) ? (1 << 6) : (1 << 5)) | dma_mode & 0x7f;
+    outb(bar0 + ATA_SECTOR_COUNT, dma_set);
+    outb(bar0 + ATA_LBA_LOW, 0);
+    outb(bar0 + ATA_LBA_MID, 0);
+    outb(bar0 + ATA_LBA_HIH, 0);
+    outb(bar0 + ATA_COMMAND, 0xEF);
+    
+    while (ATA_BSY(inb(bar0 + ATA_STATUS)));
+    uint8_t status = inb(bar0 + ATA_STATUS);
+    if (ATA_ERR(status)) {
+        api(MODULE_API_PRINT, MODULE_NAME, "Failed to enable DMA mode\n");
+    }
+}
 
 //return 255 if err/ does not exist
 //return 0 if is ATA drive
@@ -274,7 +300,7 @@ int ata_write(vfile_t *file, void *ptr, uint32_t offset, uint32_t count){
 uint8_t ata_identify(uint32_t index, uint16_t disk){
     uint16_t bar0 = drives[index].BARs[0] >> 2;
     uint16_t bar1 = drives[index].BARs[1] >> 2;
-    if(!ata_ready(bar0, bar1, disk)){
+    if(!ata_ready(bar0, bar1, disk & 0x10)){
         return -1;
     }
     // outb(bar0 ATA_DRIVE_HEAD, disk);
@@ -312,6 +338,20 @@ uint8_t ata_identify(uint32_t index, uint16_t disk){
     // drives[index].flags.huge = lba48 ? 1 : 0;
     drives[index].size_sectors = !lba48 ? (identify[60] | (identify[61] << 16)) : ((uint64_t)(identify[100]) | (uint64_t)(identify[101] << 16) | ((uint64_t)identify[102] << 32));
     api(MODULE_API_PRINT, MODULE_NAME, "Sector Count: %x\n", drives[index].size_sectors);
+    if (!(identify[49] & (1 << 8))) {
+        api(MODULE_API_PRINT, MODULE_NAME, "Drive does not support DMA\n");
+        return -1;
+    }
+    uint16_t udma_mode = identify[88] & 0xff;
+    uint16_t mdma_mode = identify[63] & 0xff;
+    api(MODULE_API_PRINT, MODULE_NAME, "DMA Modes\nUDMA: %x\nMDMA: %x\n", udma_mode, mdma_mode);
+    int highest = 0;
+    uint8_t dma = udma_mode != 0 ? udma_mode : mdma_mode;
+    while(dma){
+        highest++;
+        dma >>= 1;
+    }
+    ata_set_dma(index, (udma_mode ? 0x80 : 0) | highest);
     char fname[32];
     strcpy("/dev/disk/ide", fname);
     uint8_t ata_drives = 0;

@@ -30,9 +30,9 @@ void sysinit(){
         i++;
     }
     vfile_t *drive_test = fopen("/dev/disk/ide0");
-    uint32_t *buffer = kmalloc(1);
-    int status = fread(drive_test, buffer, 0, 512);
-    printf("Done: %x, %x\n", status, buffer[0]);
+    uint8_t *buffer = kmalloc(1);
+    int status = fread(drive_test, buffer, 0, 4096);
+    printf("Done: %x, %x\n", status, buffer[511]);
     //fopen shell file & execute it.
     for(;;);
 }
