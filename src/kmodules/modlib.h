@@ -1,24 +1,27 @@
 #pragma once
 #include <stdint.h>
 
-#define MODULE_API_REGISTER 0 //registers the module as active using information provided from the module
-#define MODULE_API_ADDFUNC 1 //adds function to kernel API handler
-#define MODULE_API_DELFUNC 2 //delete function from kernel API handler
-#define MODULE_API_ADDINT 3 //set interrupt handler
-#define MODULE_API_DELINT 4 //delete interrupt handler
-#define MODULE_API_PRINT 5 //print to terminal
-#define MODULE_API_READ 6 //read from virtual file
-#define MODULE_API_WRITE 7 //write to virtual file
-#define MODULE_API_CREAT 8 //create a virtual file and assigns it to the the proper module (requires having a read and write function passed)
-#define MODULE_API_DELET 9 //delete a virtual file
-#define MODULE_API_OPEN 10 //open a virtual file
-#define MODULE_API_MAP 11 //map physical address to virtual address
-#define MODULE_API_UNMAP 12 //unmap physical address to virtual address
-#define MODULE_API_PADDR 13 //get physical address of memory
-#define MODULE_API_MALLOC 14 //allocate memory in 4kb blocks
-#define MODULE_API_FREE 15 //free memory allocated by malloc
-#define MODULE_API_PMALLOC64K 16 //get 64k-aligned pages
-#define MODULE_API_KMALLOC_PADDR 17
+enum MODULE_API_FUNCS{
+    
+    MODULE_API_ADDFUNC,//adds function to kernel API handler
+    MODULE_API_REGISTER, //registers the module as active using information provided from the module
+    MODULE_API_DELFUNC, //delete function from kernel API handler
+    MODULE_API_ADDINT, //set interrupt handler
+    MODULE_API_DELINT, //delete interrupt handler
+    MODULE_API_PRINT, //print to terminal
+    MODULE_API_READ, //read from virtual file
+    MODULE_API_WRITE, //write to virtual file
+    MODULE_API_CREAT, //create a virtual file and assigns it to the the proper module (requires having a read and write function passed)
+    MODULE_API_DELET, //delete a virtual file
+    MODULE_API_OPEN,
+    MODULE_API_MAP, //map physical address to virtual address
+    MODULE_API_UNMAP, //unmap physical address to virtual address
+    MODULE_API_PADDR, //get physical address of memory
+    MODULE_API_MALLOC, //allocate memory in 4kb blocks
+    MODULE_API_FREE, //free memory allocated by malloc
+    MODULE_API_PMALLOC64K,
+    MODULE_API_KMALLOC_PADDR,
+};
 
 typedef uint32_t (*KOS_MAPI_FP)(unsigned int function, ...);
 typedef struct module{
@@ -30,6 +33,13 @@ typedef struct module{
     uint32_t key;
     void (*fini)(void);
 }module_t;
+
+typedef struct cpu_registers{
+    uint32_t gs, fs, es, ds;
+    uint32_t edi, esi, ebp, esp, ebx, edx, ecx, eax; 
+    uint32_t int_no, pfa;
+    uint32_t eip, cs, eflags, useresp, ss;
+}__attribute__((packed))cpu_registers_t;
 
 typedef enum vfile_type{
     VFILE_POINTER,

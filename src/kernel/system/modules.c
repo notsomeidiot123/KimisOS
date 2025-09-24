@@ -19,28 +19,44 @@ uint32_t module_api(uint32_t func, ...){
             //do something
             module_t *structure = va_arg(vars, void *);
             if(structure == 0){
-                return -1;
+                return_value =  -1;
             }
             vector_push(modules, structure);
             uint32_t tmp = pm_alloc();
             (structure->key) = (modules->size ^ 190507) + tmp << 12 ^ 4405648937 ^ 8592807313 >> 5;
+            structure->key & 0xffffff00 | modules->size;
             pm_free(tmp);
-            return 0;
-            break;
-        case MODULE_API_ADDFUNC:
-            //do something
-            return_value = -1;
-            break;
-        case MODULE_API_DELFUNC:
-            //do something
-            return_value = -1;
+            return_value = 0;
             break;
         case MODULE_API_ADDINT:
             uint32_t int_index = va_arg(vars, uint32_t);
-            //do something
+            uint32_t key = va_arg(vars, uint32_t);
+            void *interrupt_handler = va_arg(vars, void *);
+            if(int_index >= 16 || int_index < 0 /* || get_irq_handler(int_index)*/){
+                
+                return_value = -1;
+                break;
+            }
+            // printf("installed %d", int_index);
+            install_irq_handler(interrupt_handler, int_index);
+            module_t *tmpmodule = vector_get(key & 0xff, modules);
+            tmpmodule->interrupts |= 1 << int_index;
+            return_value = 0;
+            // printf("Added key\n");
             break;
         case MODULE_API_DELINT:
             int_index = va_arg(vars, uint32_t);
+            key = va_arg(vars, uint32_t);
+            tmpmodule = vector_get(key & 0xff, modules);
+            if(key == tmpmodule->key){
+                install_irq_handler(0, int_index);
+                tmpmodule->interrupts &= ~(1 << int_index);
+            }
+            else{
+                return_value = -1;
+                break;
+            }
+            return_value = 0;
             break;
         case MODULE_API_PRINT:
             // vmlog(MODULE_NAME, "Testing modules calling kernel functions\n", MLOG_PRINT, vars);
@@ -91,8 +107,8 @@ uint32_t module_api(uint32_t func, ...){
             return_value = get_paddr(addr);
             break;
         case MODULE_API_MALLOC: 
-            uint32_t size_pgs = va_arg(vars, uint32_t);
-            return_value = (uint32_t)kmalloc(size_pgs);
+            uint32_t sz_pgs = va_arg(vars, uint32_t);
+            return_value = (uint32_t)kmalloc(sz_pgs);
             break;
         case MODULE_API_FREE:
             void *ptr = va_arg(vars, void *);

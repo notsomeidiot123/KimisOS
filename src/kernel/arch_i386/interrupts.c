@@ -118,6 +118,10 @@ void kernel_panic(char *message, cpu_registers_t *regs){
 
 void install_irq_handler(void (*handler)(), uint8_t irqno){
     interrupt_handlers[irqno] = handler;
+    // printf("called\n");
+}
+void *get_irq_handler(uint8_t irqno){
+    return interrupt_handlers[irqno];
 }
 void pit_reload(uint8_t mode, uint16_t reload){
     const uint16_t PIT_CMD = 0x43;

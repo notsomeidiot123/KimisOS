@@ -127,13 +127,14 @@ void fini();
 
 enum DRIVE_TYPE{
     TYPE_NULL,
+    TYPE_TMP,
     TYPE_IDE,
     TYPE_AHCI,
     TYPE_NVME,
     TYPE_USB,
     TYPE_FLOPPY, //Here, Navya, just for you
 };
-
+uint32_t volatile transferring_disk_index = -1;
 typedef struct drive_desc{
     uint32_t BARs[8];
     enum DRIVE_TYPE type;
@@ -150,10 +151,6 @@ typedef struct drive_desc{
 
 drive_t drives[32] = {0};
 
-uint16_t get_bus_from_drive(uint32_t drive){
-    return drive & 2 ? ATA_SECONDARY_BUS : ATA_PRIMARY_BUS;
-}
-
 //return 1 if ready, 0 if not
 int ata_ready(uint32_t BAR, uint32_t BAR2, uint8_t drive){
     static uint16_t last_disk = 0;
@@ -169,6 +166,7 @@ int ata_ready(uint32_t BAR, uint32_t BAR2, uint8_t drive){
     uint8_t status = inb(BAR2 ATA_ALT_STATUS);
     return (status >> 7) == 0;
 }
+
 void ata_reset(uint16_t bar1){
     outw(bar1 ATA_DEVICE_CONTROL, 0x4);
     for(uint32_t i = 0; i < 4096; i++){
@@ -184,6 +182,89 @@ uint32_t find_free_drive(){
         }
     }
 }
+
+int ata_read(vfile_t *file, uint8_t *ptr, uint32_t offset, uint32_t count){
+    if(count == 0){
+        return -1;//prevent from accidentally reading 65536 * 512 bytes
+    }
+    
+    drive_t drive = drives[file->mount_id];
+    
+    uint16_t dmabar = drive.BARs[4] & (uint32_t)(~3);
+    
+    uint32_t status = inb(dmabar + 2);
+    api(MODULE_API_PRINT, MODULE_NAME, "status: %x\n", status);
+    PRD_T *prdt = drive.PRDT;
+    if(count == 0) return 0;
+    uint32_t count_pgs = ((count + 4096) / 4096);
+    
+    for(int i = 0; i < count_pgs; i++){
+        prdt[i].address = api(MODULE_API_PADDR, ptr + (i * (1 << 12)));
+        prdt[i].byte_count = (i == (count_pgs - 1)) ? count % (1 << 12) : 1 << 12;
+        prdt[i].reserved = (1 << 31) * (i == (count_pgs - 1));
+    }
+    outb(dmabar + 2, 0x6);
+    outl(dmabar + 4, api(MODULE_API_PADDR, prdt));
+    outb(dmabar, 0x8);
+    
+    while(!ata_ready(drive.BARs[0] >> 2, drive.BARs[1] >> 2, drive.flags.slave));
+    
+    outb(drive.BARs[1], 0x00);
+    
+    uint64_t lba = (offset >> 9);
+    uint8_t *lba_arr = &lba;
+    outb(drive.BARs[0] + ATA_DRIVE_HEAD, 0x40 | (drive.flags.slave << 4) | ((lba >> 24) * !drive.flags.huge));
+    
+    if(count >> 9 == 0){
+        return 0;
+    }
+    
+    if(drive.flags.huge){
+        outb(drive.BARs[0] + ATA_SECTOR_COUNT, (count >> 9) >> 8);
+    }else{
+        outb(drive.BARs[0] + ATA_SECTOR_COUNT, (count >> 9));
+    }
+    for(uint32_t i = 0; i < 3; i++){
+        outb(drive.BARs[0] + ATA_LBA_LOW + i, lba_arr[i + 3 * drive.flags.huge]);
+    }
+    if(drive.flags.huge){
+        outb(drive.BARs[0] + ATA_SECTOR_COUNT, (count >> 9) & 0xff);
+        for(uint32_t i = 0; i < 3; i++){
+            outb(drive.BARs[0] + ATA_LBA_LOW + i, lba_arr[i]);
+        }
+        puts(api, MODULE_NAME, "bleh\n");
+        outb(drive.BARs[0] + ATA_COMMAND, ATA_CMD_READ_DMA_EXT);
+    }else{
+        outb(drive.BARs[0] + ATA_COMMAND, ATA_CMD_READ_DMA);
+    }
+    //issue read command to drive
+    
+    transferring_disk_index = file->mount_id;
+    
+    outb(dmabar, 0x9);
+    // while(!ata_ready(drive.BARs[0] >> 2, drive.BARs[1] >> 2, drive.flags.slave));
+    while(transferring_disk_index != -1);
+    // while (!(inb(dmabar + 2) & 0x01));
+    outb(dmabar, 0x0);
+    return 0;
+}
+
+cpu_registers_t *int_handler(cpu_registers_t * regs){
+    puts(api, MODULE_NAME, "Interrupt called");
+    drive_t drive = drives[transferring_disk_index];
+    uint16_t dmabar = drive.BARs[4] & (uint32_t)(~3);
+    uint32_t status = inb(dmabar + 2);
+    transferring_disk_index = -1;
+    if(status & 0x4) return regs;
+    return regs;
+}
+
+
+int ata_write(vfile_t *file, void *ptr, uint32_t offset, uint32_t count){
+    
+}
+
+
 
 //return 255 if err/ does not exist
 //return 0 if is ATA drive
@@ -228,24 +309,42 @@ uint8_t ata_identify(uint32_t index, uint16_t disk){
     }
     // drives[index].size_sectors
     uint32_t lba48 = (identify[83] & (1 << 10));
-    drives[index].flags.huge = lba48 ? 1 : 0;
+    // drives[index].flags.huge = lba48 ? 1 : 0;
     drives[index].size_sectors = !lba48 ? (identify[60] | (identify[61] << 16)) : ((uint64_t)(identify[100]) | (uint64_t)(identify[101] << 16) | ((uint64_t)identify[102] << 32));
     api(MODULE_API_PRINT, MODULE_NAME, "Sector Count: %x\n", drives[index].size_sectors);
-    
+    char fname[32];
+    strcpy("/dev/disk/ide", fname);
+    uint8_t ata_drives = 0;
+    for(uint32_t i  = 0; i < 32; i++){
+        if(drives[i].type == TYPE_IDE) ata_drives++;
+    }
+    drives[index].type = TYPE_IDE;
+    itoa(ata_drives, fname + strlen(fname), 10);
+    vfile_t *new_file = fcreate(api, fname, VFILE_DEVICE, ata_write, ata_read);
+    new_file->mount_id = index;
+    free(api, fname);
     return 1;
 }
 
 void ide_init(uint32_t BARS[5]){
     uint32_t primary_index = find_free_drive();
-    drives[primary_index].type = TYPE_IDE;
+    drives[primary_index].type = TYPE_TMP;
+    uint32_t primary_slave_index = find_free_drive();
+    drives[primary_slave_index].type = TYPE_TMP;
     uint32_t secondary_index = find_free_drive();
-    drives[secondary_index].type = TYPE_IDE;
+    drives[secondary_index].type = TYPE_TMP;
+    uint32_t secondary_slave_index = find_free_drive();
+    drives[secondary_slave_index].type = TYPE_TMP;
     for(int i = 0; i < 2; i++){
         drives[primary_index].BARs[i] = BARS[i];
+        drives[primary_slave_index].BARs[i] = BARS[i];
         drives[secondary_index].BARs[i] = BARS[i+2];
+        drives[secondary_slave_index].BARs[i] = BARS[i+2];
     }
     drives[primary_index].BARs[4] = BARS[4];
+    drives[primary_slave_index].BARs[4] = BARS[4];
     drives[secondary_index].BARs[4] = BARS[4];
+    drives[secondary_slave_index].BARs[4] = BARS[4];
     
     uint32_t prdt_primary_paddr = api(MODULE_API_PMALLOC64K);
     uint32_t prdt_secondary_paddr = api(MODULE_API_PMALLOC64K);
@@ -253,45 +352,41 @@ void ide_init(uint32_t BARS[5]){
     drives[secondary_index].PRDT = (void *)api(MODULE_API_KMALLOC_PADDR, prdt_secondary_paddr, 16);
     //now call ATA IDENTIFY
     uint8_t master_status = ata_identify(primary_index, ATA_MASTER);
-    drive_t master_copy = drives[primary_index];
-    if(ata_identify(primary_index, ATA_SLAVE) == 0){
-        if(master_status == -1){
-            drives[primary_index].flags.slave = 1;
-        }
-        else{
-            uint32_t slave_index = find_free_drive();
-            drives[slave_index] = drives[primary_index];
-            drives[slave_index].flags.slave = 1;
-            drives[primary_index] = master_copy;
-            drives[slave_index].type = TYPE_IDE;
-        }
+    uint8_t slave_status = ata_identify(primary_slave_index, ATA_SLAVE);
+    if(master_status){
+        drives[primary_index].type = TYPE_NULL;
+    }
+    if(slave_status){
+        drives[primary_slave_index].type = TYPE_NULL;
     }
     master_status = ata_identify(secondary_index, ATA_MASTER);
-    master_copy = drives[secondary_index];
-    if(ata_identify(secondary_index, ATA_SLAVE) == 0){
-        if(master_status == -1){
-            drives[secondary_index].flags.slave = 1;
-        }
-        else{
-            uint32_t slave_index = find_free_drive();
-            drives[slave_index] = drives[secondary_index];
-            drives[slave_index].flags.slave = 1;
-            drives[secondary_index] = master_copy;
-            drives[slave_index].type = TYPE_IDE;
-        }
+    slave_status = ata_identify(secondary_slave_index, ATA_SLAVE);
+    if(master_status){
+        drives[secondary_index].type = TYPE_NULL;
     }
+    if(slave_status){
+        drives[secondary_slave_index].type = TYPE_NULL;
+    }
+    // outb(BARS[4] >> 1, 0x0);
+    // int volatile tt = 0;
+    // while(tt < 50000){
+    //     tt++;
+    // }
+    
 }
 
 void init(KOS_MAPI_FP module_api, uint32_t api_version){
     api = module_api;
-    api(MODULE_API_PRINT, MODULE_NAME, "KIDM Storage Driver Module v0.1.0\nSupported interfaces: \n");
+    api(MODULE_API_PRINT, MODULE_NAME, "KIDM Storage Driver Module v0.1.0\nSupported interfaces: \n- PATA\n");
     
     int status = api(MODULE_API_REGISTER, &module_data);
     if(status){
         api(MODULE_API_PRINT, MODULE_NAME, "Failed to register module, exiting\n");
         return;
     }
-    api(MODULE_API_PRINT, MODULE_NAME, "Key Test: %x", module_data.key);
+    api(MODULE_API_ADDINT, 15, module_data.key, int_handler);
+    api(MODULE_API_ADDINT, 14, module_data.key, int_handler);
+    // api(MODULE_API_ADDINT, 0, module_data.key, int_handler);
     vfile_t *pci_drive_dir = fopen(api, "/dev/pci/disk/");
     vfile_t **dir_data = (pci_drive_dir->access.data.ptr);
     for(uint32_t i = 0; dir_data[i]; i++){
