@@ -53,7 +53,7 @@ void pci_make_file(uint32_t class, uint8_t bus, uint8_t slot, uint8_t func){
         case 0x1://PCI class 0x1 is disks
         strcpy("disk/", str + strlen(str));
         uint32_t l = (uint32_t)pci_read_config(bus, slot, func, 0x4) | (uint32_t)pci_read_config(bus, slot, func, 0x6) << 16;
-        pci_write_config(bus, slot, func, 0x4, l | 2);
+        pci_write_config(bus, slot, func, 0x4, l | 4);
         
         break;
         case 0x2://PCI class 0x2 is network controllers

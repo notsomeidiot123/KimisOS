@@ -29,10 +29,17 @@ void sysinit(){
         printf("%d: %s\n", i, dir_data[i]->name);
         i++;
     }
-    vfile_t *drive_test = fopen("/dev/disk/ide0");
-    uint8_t *buffer = kmalloc(1);
-    int status = fread(drive_test, buffer, 0, 4096);
-    printf("Done: %x, %x\n", status, buffer[511]);
+    // vfile_t *drive_test = fopen("/dev/disk/ide0");
+    // uint8_t *buffer = kmalloc(1);
+    // int status = fread(drive_test, buffer, 0, 4096);
+    // if(status == -1){
+    //     printf("Error reading drive\n");
+    //     for(;;);
+    // }
+    // for(uint32_t i = 0; i < 512; i++){
+    //     printf("%c", buffer[i]);
+        
+    // }
     //fopen shell file & execute it.
     for(;;);
 }
