@@ -61,12 +61,15 @@ init:
 	mkdir bin/boot
 	mkdir bin/kernel
 	mkdir bin/modules
+	touch test.bin
+	qemu-img resize test.bin 64M
 
 .PHONY: tools makefile src/
 
 clean:
 	rm diskwrite
 	rm image.bin
+	rm test.bin
 	rm -rf bin/
 	rm -rf mount/
 	rm *.elf
