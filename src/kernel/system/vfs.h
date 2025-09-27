@@ -8,6 +8,7 @@ typedef enum vfile_type{
     VFILE_DIRECTORY,
     VFILE_PDIR,//used for directories in physical filesystems.
     VFILE_FILE,//physical files
+    VFILE_SYMLINK,
     VFILE_PIPE //yay we have pipes
 }VFILE_TYPE; 
 

@@ -325,69 +325,88 @@ part_2:
     ; debug
     push eax
     
-    mov edi, disk_module_file
+    mov edi, initrd_file
     call open_file
-    ; debug
     cmp eax, -1
-    je .find_fs_driver_no_disk
-    mov [disk_module_struct.size], edx
+    je .start32_no_initrc
+    
+    
+    ; mov edi, disk_module_file
+    ; call open_file
+    ; ; debug
+    ; cmp eax, -1
+    ; je .find_fs_driver_no_disk
+    mov [initrd.size], edx
     mov esi, eax
     and edx, 0xfffff000
     add edx, 0x2000
     add [kload_paddr], edx
-    ; mov eax, [kload_paddr]
-    ; jmp $
-    ; debug
+    ; ; mov eax, [kload_paddr]
+    ; ; jmp $
+    ; ; debug
     mov edi, [kload_paddr]
-    mov [disk_module_struct.ptr], edi
+    mov [initrd.ptr], edi
+    push edx
     call read_file
+    pop edx
+    add [kload_paddr], edx
     jc load_fail
-    ; mov esi, [kload_paddr]
-    ; call load_elf
-    ; debug
-    jc load_fail
-    jmp .find_fs_driver
-    .find_fs_driver_no_disk:
-        mov ax, 0xe44
-        int 0x10
-    .find_fs_driver:
-        ; mov edi, fs_module_file
-        ; call open_file
-        ; cmp eax, -1
-        ; je .start32_no_fs
-        ; mov [fs_module_struct.size], edx
-        ; mov eax, esi
-        ; and edx, 0xfffffc00
-        ; add edx, 0x1000
-        ; add [kload_paddr], edx
-        
-        ; mov edi, [kload_paddr]
-        ; mov [fs_module_struct.ptr], edi
-        ; call read_file
-        
-        ; jc load_fail
-        ;
-        mov edi, fs_module_file
-        call open_file
-        ; debug
-        cmp eax, -1
-        je .start32_no_fs
-        mov [fs_module_struct.size], edx
-        mov esi, eax
-        and edx, 0xfffff000
-        add edx, 0x2000
-        add [kload_paddr], edx
-        ; mov eax, [kload_paddr]
-        ; jmp $
-        ; debug
-        mov edi, [kload_paddr]
-        mov [fs_module_struct.ptr], edi
-        call read_file
-        jc load_fail
-        jmp .start32
-        ;
-    .start32_no_fs:
-        mov ax, 0xe46
+    jmp .start32
+    ; ; mov esi, [kload_paddr]
+    ; ; call load_elf
+    ; ; debug
+    ; jc load_fail
+    ; jmp .find_fs_driver
+    ; .find_fs_driver_no_disk:
+    ;     mov ax, 0xe44
+    ;     int 0x10
+    ; .find_fs_driver:
+    ;     mov edi, fs_module_file
+    ;     call open_file
+    ;     ; debug
+    ;     cmp eax, -1
+    ;     je .start32_no_fs
+    ;     mov [fs_module_struct.size], edx
+    ;     mov esi, eax
+    ;     and edx, 0xfffff000
+    ;     add edx, 0x2000
+    ;     add [kload_paddr], edx
+    ;     ; mov eax, [kload_paddr]
+    ;     ; jmp $
+    ;     ; debug
+    ;     mov edi, [kload_paddr]
+    ;     mov [fs_module_struct.ptr], edi
+    ;     push edx
+    ;     call read_file
+    ;     pop edx
+    ;     add [kload_paddr], edx
+    ;     jc load_fail
+    ;     jmp .find_initrc
+    ;     ;
+    ; .start32_no_fs:
+    ;     mov ax, 0xe46
+    ;     int 0x10
+    ; .find_initrc:
+    ;     mov edi, initrc_file
+    ;     call open_file
+    ;     ; debug
+    ;     cmp eax, -1
+    ;     je .start32_no_initrc
+    ;     mov [initrc_struct.size], edx
+    ;     mov esi, eax
+    ;     and edx, 0xfffff000
+    ;     add edx, 0x2000
+    ;     add [kload_paddr], edx
+    ;     ; mov eax, [kload_paddr]
+    ;     ; jmp $
+    ;     ; debug
+    ;     mov edi, [kload_paddr]
+    ;     mov [initrc_struct.ptr], edi
+    ;     call read_file
+    ;     jc load_fail
+    ;     jmp .start32
+    .start32_no_initrc:
+        mov ax, 0xe49
         int 0x10
     .start32:
     ; debug
@@ -884,23 +903,34 @@ k_info:
     .xres:              dw 80
     .yres:              dw 25
     .framebuffer_ptr:   dd 0xb8000
-    .loaded_modules:    dd disk_module_struct
+    .loaded_modules:    dd initrd
 ;loaded_modules points to a struct array containing a ptr to the entry point of each pre-loaded module to be executed during startup
-disk_module_struct:
-    .ptr: dd 0
-    .size: dd 0
-    .type:  dd 1
-    .flags: db 0
-    .next_entry: dd fs_module_struct
-fs_module_struct:
-    .ptr: dd 0
-    .size: dd 0
-    .type: dd 2
-    .flags: db 0
-    .next_entry: dd 0
+; disk_module_struct:
+;     .ptr: dd 0
+;     .size: dd 0
+;     .type:  dd 1
+;     .flags: db 0
+;     .next_entry: dd fs_module_struct
+; fs_module_struct:
+;     .ptr: dd 0
+;     .size: dd 0
+;     .type: dd 2
+;     .flags: db 0
+;     .next_entry: dd initrc_struct
+; initrc_struct:
+;     .ptr: dd 0
+;     .size: dd 0
+;     .type: dd 2
+;     .flags: db 1
+;     .next_entry: dd 0
+initrd:
+    .ptr dd 0
+    .size dd 0
 kernel_file: db "kernel", 0x0, 0x0, "elf"
-disk_module_file: db "idm", 0, 0, 0, 0, 0, "elf"
-fs_module_file: db "ifsm", 0, 0, 0, 0, "elf"
+initrd_file: db "initrd", 0x0, 0x0, "rd"
+; disk_module_file: db "idm", 0, 0, 0, 0, 0, "elf"
+; fs_module_file: db "ifsm", 0, 0, 0, 0, "elf"
+; initrc_file: db "initrc", 0, 0, "conf"
 loaded_fat_block: dd 0
 last_allocated_pgtb: dd 0x10000
 sacrifice1: dd 0

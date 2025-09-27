@@ -10,3 +10,4 @@ intlog.*
 *.img
 .vscode
 bochsrc
+initrd.rd

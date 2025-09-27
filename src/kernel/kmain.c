@@ -10,6 +10,7 @@
 #include "system/modules.h"
 #include "system/elf.h"
 #include "system/vfs.h"
+#include "drivers/ustar.h"
 
 kernel_info_t *boot_info = 0;
 
@@ -19,17 +20,9 @@ void pid0(){
 void sysinit(){
     mlog("KERNEL", "PID 1 Started\n", MLOG_PRINT);
     pci_init();
-    modules_init(boot_info);
-    vfile_t *file = fopen("/dev/disk");
-    vfile_t **dir_data = file->access.data.ptr;
-    printf("/dev/disk/: %x\n", file);
-    // fcreate("/dev/disk/test", VFILE_DEVICE, 0, 0);
-    int i = 0;
-    while(dir_data[i]){
-        printf("%d: %s\n", i, dir_data[i]->name);
-        i++;
-    }
-    // vfile_t *drive_test = fopen("/dev/disk/ide0");
+    // modules_init(boot_info, 0);
+    read_initrd(boot_info->initrd);
+    vfile_t *initrc = fopen("/boot/initrc.conf");
     // uint8_t *buffer = kmalloc(1);
     // int status = fread(drive_test, buffer, 0, 4096);
     // if(status == -1){
@@ -41,6 +34,7 @@ void sysinit(){
         
     // }
     //fopen shell file & execute it.
+    printf("Bleh\n");
     for(;;);
 }
 extern void kmain(kernel_info_t *kernel_info){
@@ -57,6 +51,7 @@ extern void kmain(kernel_info_t *kernel_info){
     fcreate("/dev", VFILE_DIRECTORY, kmalloc(1), 1);
     fcreate("/dev/disk", VFILE_DIRECTORY, kmalloc(1), 1);
     fcreate("/tmp", VFILE_DIRECTORY, kmalloc(1), 1);
+    fcreate("/boot", VFILE_DIRECTORY, kmalloc(1), 1);
     mlog("KERNEL", "Initializing Scheduler & starting PID 1\n", MLOG_PRINT);
     boot_info = kernel_info;
     scheduler_init();

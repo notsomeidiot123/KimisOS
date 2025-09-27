@@ -75,6 +75,7 @@ vfile_t *fcreate(char *name, VFILE_TYPE type, ...){
                 case VFILE_POINTER:
                 case VFILE_DIRECTORY:
                 case VFILE_MOUNT:
+                case VFILE_SYMLINK:
                     void *ptr = va_arg(args, void*);
                     vfile->access.data.ptr = ptr;
                     vfile->access.data.size_pgs = va_arg(args, uint32_t);
@@ -92,6 +93,9 @@ vfile_t *fcreate(char *name, VFILE_TYPE type, ...){
                     break;
             }
             return vfile; //allow drivers to make last minute changes before it's sent to the user
+        }
+        if(tmpfile->type == VFILE_SYMLINK){
+            tmpfile = (vfile_t *)tmpfile->access.data.ptr;
         }
         switch(tmpfile->type){
             case VFILE_DIRECTORY:
@@ -132,6 +136,8 @@ int fwrite(vfile_t *file_entry, void *byte_array, uint32_t offset, uint32_t coun
         case VFILE_DEVICE:
             return file_entry->access.funcs.write(file_entry, byte_array, offset, count);
             break;
+        case VFILE_SYMLINK:
+            return fwrite(file_entry->access.data.ptr, byte_array, offset, count);
     }
     return INT32_MIN;//how did we get here?
 }
@@ -151,6 +157,8 @@ int fread(vfile_t *file_entry, void *byte_array, uint32_t offset, uint32_t count
         case VFILE_DEVICE:
             return file_entry->access.funcs.read(file_entry, byte_array, offset, count);
             break;
+        case VFILE_SYMLINK:
+            return fread(file_entry->access.data.ptr, byte_array, offset, count);
     }
     return INT32_MIN; //Okay, alright, funny joke guys but we really shouldn't be able to get here
 }
@@ -169,6 +177,9 @@ vfile_t *search_dir(char *name, vfile_t dir){
 
 vfile_t *fopen(char *name){
     if(name[0] == '/'){
+        if(strlen(name) == 1){
+            return &root_dir;
+        }
         name++;
     }
     if(name[strlen(name) - 1] == '/'){
@@ -187,6 +198,9 @@ vfile_t *fopen(char *name){
         if(!tmpfile){
             // printf("not found\n");
             return 0;
+        }
+        if(tmpfile->type == VFILE_SYMLINK){
+            tmpfile = (vfile_t *)tmpfile->access.data.ptr;
         }
         switch(tmpfile->type){
             case VFILE_DIRECTORY:

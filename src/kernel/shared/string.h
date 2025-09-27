@@ -24,3 +24,15 @@ inline uint32_t strcmp(char *str1, char *str2){
 char *strtok(char *str, char delim);
 void strcpy(char *src, char *dest);
 void memcpy(char *src, char *dest, uint32_t c);
+inline void strcat(char *src, char *dest){
+    strcpy(src, dest + strlen(dest));
+}
+inline int memcmp(char *ptr1, char *ptr2, uint32_t size){
+    for(uint32_t i = 0; i < size; i++){
+        if(ptr1[i] == ptr2[i]){
+            continue;
+        }
+        return ptr1[i] - ptr2[i];
+    }
+    return 0;
+}

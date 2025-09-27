@@ -9,13 +9,10 @@
 #define MLOG_WARN 3
 #define MLOG_ERR 4
 
-typedef struct module_linked_list{
+typedef struct initrd{
     void *ptr;
     uint32_t size;
-    uint32_t id;
-    uint8_t flags;
-    struct module_linked_list *link;
-}__attribute__((packed)) kernel_module_t;
+}__attribute__((packed)) initrd_t;
 
 typedef struct vector{
     void *ptr;
@@ -37,7 +34,7 @@ typedef struct kernel_info{
     uint16_t monitor_x_resolution;
     uint16_t monitor_y_resolution;
     void *framebuffer;
-    kernel_module_t *loaded_modules;
+    initrd_t *initrd;
     // uint32_t loaded_module_count;
 }__attribute__((packed)) kernel_info_t;
 

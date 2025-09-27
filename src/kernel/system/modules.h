@@ -1,8 +1,10 @@
 #pragma once
+#include "vfs.h"
 #include <stdint.h>
 #include "../shared/kstdlib.h"
 
 #define MODULE_PRESENT 0x80
+#define MODULE_INITRC 0x01
 //semver is represented by hexadecimal
 //first two digits are the major number
 //second two digits are the minor number
@@ -41,4 +43,4 @@ typedef struct module{
     void (*fini)(void);
 }module_t;
 
-void modules_init(kernel_info_t *kernel_info);
+void modules_init();
