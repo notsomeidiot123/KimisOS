@@ -29,17 +29,7 @@ void sysinit(){
     }
     modules_init();
     initrc_read(initrc);
-    // uint8_t *buffer = kmalloc(1);
-    // int status = fread(drive_test, buffer, 0, 4096);
-    // if(status == -1){
-    //     printf("Error reading drive\n");
-    //     for(;;);
-    // }
-    // for(uint32_t i = 0; i < 512; i++){
-    //     printf("%c", buffer[i]);
-        
-    // }
-    //fopen shell file & execute it.
+    
     printf("Bleh\n");
     for(;;);
 }

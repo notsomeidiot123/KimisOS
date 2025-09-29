@@ -28,7 +28,7 @@ int read_initrd(initrd_t *initrd){
         //     return filesize;
         // }
         // printf("size: %d", sizeof(USTAR_file_t));
-        uint32_t fsize_pgs = (((filesize + 4095)/4096) + 1);
+        uint32_t fsize_pgs = (((filesize + 4095)/4096));
         // uint32_t *ptr = kmalloc(fsize_pgs);
         // for(uint32_t i = 0; i < (filesize/4) + 1; i++){
         //     ptr[i] = ((uint32_t *)(archive + offset + sizeof(USTAR_file_t)))[i];

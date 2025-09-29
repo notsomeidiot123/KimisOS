@@ -188,9 +188,96 @@ uint32_t find_free_drive(){
     }
 }
 
+int ata_write(vfile_t *file, void *ptr, uint32_t offset, uint32_t count){
+    if (count == 0) return -1;
+    
+    drive_t drive = drives[file->mount_id];
+    uint16_t io_base = drive.BARs[0] >> 2;
+    uint16_t ctrl_base = drive.BARs[1] >> 2;
+    uint16_t bm_base = drive.BARs[4] & ~3;
+
+    
+    PRD_T *prdt = drive.PRDT;
+    uint32_t pages = (count + 4095) / 4096;
+    
+    uint32_t sector_count = pages*8;
+    api(MODULE_API_PRINT, MODULE_NAME, "pages: %x, scount: %x\n", pages, sector_count);
+    if (sector_count == 0) return -1;
+    for (uint32_t i = 0; i < pages; i++) {
+        prdt[i].address = api(MODULE_API_PADDR, ptr + (i << 12));
+        // api(MODULE_API_PRINT, MODULE_NAME, "ADDR: %x, Count: %x", ptr + (i << 12), api(MODULE_API_PADDR, prdt));
+        prdt[i].byte_count = 4096;
+        api(MODULE_API_PRINT, MODULE_NAME, "ADDR: %x, Count: %x\n", prdt[i].address, prdt[i].byte_count);
+        prdt[i].reserved = 0;
+        if(i == pages - 1){
+            prdt[i].reserved = 0x8000;
+            api(MODULE_API_PRINT, MODULE_NAME, "Reserved: %x\n", prdt[i].reserved);
+        }
+    }
+    
+    outb(ctrl_base, 0x00);
+    outb(bm_base + 2, 0x06);
+    outl(bm_base + 4, api(MODULE_API_PADDR, prdt));
+    uint32_t test = inl(bm_base + 4);
+    api(MODULE_API_PRINT, MODULE_NAME, "PRDT (Read back from busmaster): %x\n", test);
+    outb(bm_base, 0x00);
+    
+    while(!ata_ready(io_base, ctrl_base, drive.flags.slave << 4));
+    uint64_t lba = offset >> 9;
+    // uint64_t lba = 0;
+    outb(io_base + ATA_DRIVE_HEAD, 0x40 | (drive.flags.slave << 4) | ((lba >> 24) & 0x0F));
+    
+    if (drive.flags.huge) {
+        // 48-bit LBA (use READ_DMA_EXT)
+        outb(io_base + ATA_SECTOR_COUNT, sector_count >> 8);
+        outb(io_base + ATA_LBA_LOW,     (lba >> 24) & 0xFF);
+        outb(io_base + ATA_LBA_MID,     (lba >> 32) & 0xFF);
+        outb(io_base + ATA_LBA_HIH,    (lba >> 40) & 0xFF);
+        outb(io_base + ATA_SECTOR_COUNT, sector_count & 0xFF);
+        outb(io_base + ATA_LBA_LOW,     lba & 0xFF);
+        outb(io_base + ATA_LBA_MID,     (lba >> 8) & 0xFF);
+        outb(io_base + ATA_LBA_HIH,    (lba >> 16) & 0xFF);
+        uint32_t volatile status = inb(io_base + ATA_STATUS);
+        while(status & 0x80 || !(status & 0x40)) status = inb(io_base + ATA_STATUS);
+        outb(io_base + ATA_COMMAND, ATA_CMD_WRITE_DMA_EXT);
+    } else {
+        // 28-bit LBA (use READ_DMA)
+        outb(io_base + ATA_SECTOR_COUNT, sector_count);
+        outb(io_base + ATA_LBA_LOW,     lba & 0xFF);
+        outb(io_base + ATA_LBA_MID,     (lba >> 8) & 0xFF);
+        outb(io_base + ATA_LBA_HIH,    (lba >> 16) & 0xFF);
+        uint32_t volatile status = inb(io_base + ATA_STATUS);
+        while(status & 0x80 || !(status & 0x40)) status = inb(io_base + ATA_STATUS);
+        outb(io_base + ATA_COMMAND, ATA_CMD_WRITE_DMA);
+    }
+    expected_ints = pages;
+    recieved_ints = 0;
+    
+    
+    outb(bm_base, 0x01); 
+    
+    transferring_disk_index = file->mount_id;
+    
+    uint8_t status = inb(ctrl_base);
+    uint8_t bm_status = inb(bm_base + 2);
+    api(MODULE_API_PRINT, MODULE_NAME, "Status: (ATA)%x, (Busmaster)%x\n", status, bm_status);
+    // if(ATA_ABRT(status)){
+    //     puts(api, MODULE_NAME, "Command aborted\n");
+    //     return -1;
+    // }
+    
+    // while (transferring_disk_index != -1);
+    while(ATA_BSY(status)){
+        status = inb(io_base + ATA_STATUS);
+    }
+    outb(bm_base, 0x00);
+    
+    return 0;
+}
+
 int ata_read(vfile_t *file, uint8_t *ptr, uint32_t offset, uint32_t count) {
     if (count == 0) return -1;
-
+    
     drive_t drive = drives[file->mount_id];
     uint16_t io_base = drive.BARs[0] >> 2;
     uint16_t ctrl_base = drive.BARs[1] >> 2;
@@ -296,9 +383,6 @@ cpu_registers_t *int_handler(cpu_registers_t * regs){
 }
 
 
-int ata_write(vfile_t *file, void *ptr, uint32_t offset, uint32_t count){
-    
-}
 
 //dma set 0x80 for udma
 //
