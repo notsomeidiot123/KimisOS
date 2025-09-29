@@ -11,6 +11,7 @@
 #include "system/elf.h"
 #include "system/vfs.h"
 #include "drivers/ustar.h"
+#include "system/initrc.h"
 
 kernel_info_t *boot_info = 0;
 
@@ -23,6 +24,11 @@ void sysinit(){
     // modules_init(boot_info, 0);
     read_initrd(boot_info->initrd);
     vfile_t *initrc = fopen("/boot/initrc.conf");
+    if(initrc){
+        mlog("KERNEL", "Found initrc at: %x\n", MLOG_PRINT, initrc->access.data.ptr);
+    }
+    modules_init();
+    initrc_read(initrc);
     // uint8_t *buffer = kmalloc(1);
     // int status = fread(drive_test, buffer, 0, 4096);
     // if(status == -1){
@@ -40,13 +46,13 @@ void sysinit(){
 extern void kmain(kernel_info_t *kernel_info){
     serial_init();
     pm_init(kernel_info);
+    vfs_init();
     mlog("KERNEL", "Initializing IDT\n", MLOG_PRINT);
     idt_load();
     pic_init(0x20);
     pic_disable();
     pic_setmask(0x0, PIC1_DATA);
     pic_setmask(0x0, PIC2_DATA);
-    vfs_init();
     
     fcreate("/dev", VFILE_DIRECTORY, kmalloc(1), 1);
     fcreate("/dev/disk", VFILE_DIRECTORY, kmalloc(1), 1);

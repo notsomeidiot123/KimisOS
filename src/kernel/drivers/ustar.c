@@ -27,16 +27,17 @@ int read_initrd(initrd_t *initrd){
         //     *out = ptr + 512;
         //     return filesize;
         // }
+        // printf("size: %d", sizeof(USTAR_file_t));
         uint32_t fsize_pgs = (((filesize + 4095)/4096) + 1);
         // uint32_t *ptr = kmalloc(fsize_pgs);
-        
         // for(uint32_t i = 0; i < (filesize/4) + 1; i++){
-        //     ptr[i] = ((uint32_t *)(archive + offset))[i];
+        //     ptr[i] = ((uint32_t *)(archive + offset + sizeof(USTAR_file_t)))[i];
+        //     if(fsize_pgs == 2)printf("%x", ptr[i]);
         // }
         char final_fname[80] = "/boot/";
         strcat(file->filename, final_fname);
-        fcreate(final_fname, VFILE_POINTER, archive + offset + sizeof(USTAR_file_t), fsize_pgs);
-        printf("%s, %d, %d\n", final_fname, filesize, fsize_pgs);
+        fcreate(final_fname, VFILE_POINTER, (archive + offset + sizeof(USTAR_file_t)), fsize_pgs);
+        // printf("%s, %d, %d\n", final_fname, filesize, fsize_pgs);
         offset += (((filesize + 511) / 512) + 1) * 512;
     }
 }

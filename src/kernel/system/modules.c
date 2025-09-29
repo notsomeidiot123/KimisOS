@@ -128,7 +128,10 @@ uint32_t module_api(uint32_t func, ...){
     va_end(vars);
     return return_value;
 }
-
+void module_start(void *ptr){
+    void (*entry)(void* api, uint32_t version) = load_elf(ptr, PT_SYS);
+    (*entry)(module_api, 0);
+}
 void modules_init(){
     mlog(MODULE_NAME, "Initializing Boot-Time Modules\n", MLOG_PRINT);
     // kernel_module_t *module = kernel_info->loaded_modules;

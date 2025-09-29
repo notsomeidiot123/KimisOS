@@ -44,3 +44,4 @@ typedef struct module{
 }module_t;
 
 void modules_init();
+void module_start(void *ptr);

@@ -79,7 +79,8 @@ vfile_t *fcreate(char *name, VFILE_TYPE type, ...){
                     void *ptr = va_arg(args, void*);
                     vfile->access.data.ptr = ptr;
                     vfile->access.data.size_pgs = va_arg(args, uint32_t);
-                    *(uint32_t *)ptr = 0;
+                    // *(uint32_t *)(ptr + (vfile->access.data.size_pgs * 4096)) = 0;
+                    // what was the above line even for
                     add_file(vfile, current_dir);
                     break;
                 case VFILE_FILE:

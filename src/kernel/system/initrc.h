@@ -1,0 +1,1 @@
+void initrc_read(char *file);
