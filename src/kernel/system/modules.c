@@ -67,7 +67,8 @@ uint32_t module_api(uint32_t func, ...){
         case MODULE_API_READ:
             vfile_t *file = va_arg(vars, vfile_t *);
             char *buffer = va_arg(vars, char *);
-            uint32_t offset = va_arg(vars, uint32_t), count = va_arg(vars, uint32_t);
+            uint32_t offset = va_arg(vars, uint32_t);
+            uint32_t count = va_arg(vars, uint32_t);
             return_value = fread(file, buffer, offset, count);
             break;
         case MODULE_API_WRITE:

@@ -40,7 +40,6 @@ extern void kmain(kernel_info_t *kernel_info){
     mlog("KERNEL", "Initializing IDT\n", MLOG_PRINT);
     idt_load();
     pic_init(0x20);
-    pic_disable();
     pic_setmask(0x0, PIC1_DATA);
     pic_setmask(0x0, PIC2_DATA);
     

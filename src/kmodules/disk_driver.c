@@ -201,17 +201,17 @@ int ata_write(vfile_t *file, void *ptr, uint32_t offset, uint32_t count){
     uint32_t pages = (count + 4095) / 4096;
     
     uint32_t sector_count = pages*8;
-    api(MODULE_API_PRINT, MODULE_NAME, "pages: %x, scount: %x\n", pages, sector_count);
+    // api(MODULE_API_PRINT, MODULE_NAME, "pages: %x, scount: %x\n", pages, sector_count);
     if (sector_count == 0) return -1;
     for (uint32_t i = 0; i < pages; i++) {
         prdt[i].address = api(MODULE_API_PADDR, ptr + (i << 12));
         // api(MODULE_API_PRINT, MODULE_NAME, "ADDR: %x, Count: %x", ptr + (i << 12), api(MODULE_API_PADDR, prdt));
         prdt[i].byte_count = 4096;
-        api(MODULE_API_PRINT, MODULE_NAME, "ADDR: %x, Count: %x\n", prdt[i].address, prdt[i].byte_count);
+        // api(MODULE_API_PRINT, MODULE_NAME, "ADDR: %x, Count: %x\n", prdt[i].address, prdt[i].byte_count);
         prdt[i].reserved = 0;
         if(i == pages - 1){
             prdt[i].reserved = 0x8000;
-            api(MODULE_API_PRINT, MODULE_NAME, "Reserved: %x\n", prdt[i].reserved);
+            // api(MODULE_API_PRINT, MODULE_NAME, "Reserved: %x\n", prdt[i].reserved);
         }
     }
     
@@ -219,7 +219,7 @@ int ata_write(vfile_t *file, void *ptr, uint32_t offset, uint32_t count){
     outb(bm_base + 2, 0x06);
     outl(bm_base + 4, api(MODULE_API_PADDR, prdt));
     uint32_t test = inl(bm_base + 4);
-    api(MODULE_API_PRINT, MODULE_NAME, "PRDT (Read back from busmaster): %x\n", test);
+    // api(MODULE_API_PRINT, MODULE_NAME, "PRDT (Read back from busmaster): %x\n", test);
     outb(bm_base, 0x00);
     
     while(!ata_ready(io_base, ctrl_base, drive.flags.slave << 4));
@@ -260,7 +260,7 @@ int ata_write(vfile_t *file, void *ptr, uint32_t offset, uint32_t count){
     
     uint8_t status = inb(ctrl_base);
     uint8_t bm_status = inb(bm_base + 2);
-    api(MODULE_API_PRINT, MODULE_NAME, "Status: (ATA)%x, (Busmaster)%x\n", status, bm_status);
+    // api(MODULE_API_PRINT, MODULE_NAME, "Status: (ATA)%x, (Busmaster)%x\n", status, bm_status);
     // if(ATA_ABRT(status)){
     //     puts(api, MODULE_NAME, "Command aborted\n");
     //     return -1;
@@ -288,17 +288,17 @@ int ata_read(vfile_t *file, uint8_t *ptr, uint32_t offset, uint32_t count) {
     uint32_t pages = (count + 4095) / 4096;
     
     uint32_t sector_count = pages*8;
-    api(MODULE_API_PRINT, MODULE_NAME, "pages: %x, scount: %x\n", pages, sector_count);
+    // api(MODULE_API_PRINT, MODULE_NAME, "pages: %x, scount: %x\n", pages, sector_count);
     if (sector_count == 0) return -1;
     for (uint32_t i = 0; i < pages; i++) {
         prdt[i].address = api(MODULE_API_PADDR, ptr + (i << 12));
         // api(MODULE_API_PRINT, MODULE_NAME, "ADDR: %x, Count: %x", ptr + (i << 12), api(MODULE_API_PADDR, prdt));
         prdt[i].byte_count = 4096;
-        api(MODULE_API_PRINT, MODULE_NAME, "ADDR: %x, Count: %x\n", prdt[i].address, prdt[i].byte_count);
+        // api(MODULE_API_PRINT, MODULE_NAME, "ADDR: %x, Count: %x\n", prdt[i].address, prdt[i].byte_count);
         prdt[i].reserved = 0;
         if(i == pages - 1){
             prdt[i].reserved = 0x8000;
-            api(MODULE_API_PRINT, MODULE_NAME, "Reserved: %x\n", prdt[i].reserved);
+            // api(MODULE_API_PRINT, MODULE_NAME, "Reserved: %x\n", prdt[i].reserved);
         }
     }
     
@@ -306,7 +306,7 @@ int ata_read(vfile_t *file, uint8_t *ptr, uint32_t offset, uint32_t count) {
     outb(bm_base + 2, 0x06);
     outl(bm_base + 4, api(MODULE_API_PADDR, prdt));
     uint32_t test = inl(bm_base + 4);
-    api(MODULE_API_PRINT, MODULE_NAME, "PRDT (Read back from busmaster): %x\n", test);
+    // api(MODULE_API_PRINT, MODULE_NAME, "PRDT (Read back from busmaster): %x\n", test);
     outb(bm_base, 0x08);
     
     while(!ata_ready(io_base, ctrl_base, drive.flags.slave << 4));
@@ -347,7 +347,7 @@ int ata_read(vfile_t *file, uint8_t *ptr, uint32_t offset, uint32_t count) {
     
     uint8_t status = inb(ctrl_base);
     uint8_t bm_status = inb(bm_base + 2);
-    api(MODULE_API_PRINT, MODULE_NAME, "Status: (ATA)%x, (Busmaster)%x\n", status, bm_status);
+    // api(MODULE_API_PRINT, MODULE_NAME, "Status: (ATA)%x, (Busmaster)%x\n", status, bm_status);
     // if(ATA_ABRT(status)){
     //     puts(api, MODULE_NAME, "Command aborted\n");
     //     return -1;
@@ -368,7 +368,7 @@ cpu_registers_t *int_handler(cpu_registers_t * regs){
     uint32_t status = inb(dmabar + 2);
     outb(dmabar + 2, 0x4);
     recieved_ints++;
-    api(MODULE_API_PRINT, MODULE_NAME, "Interrupt called, %x\n", status);
+    // api(MODULE_API_PRINT, MODULE_NAME, "Interrupt called, %x\n", status);
     if(status & 2){
         
         api(MODULE_API_PRINT, MODULE_NAME, "Error\n");
@@ -459,7 +459,7 @@ uint8_t ata_identify(uint32_t index, uint16_t disk){
     }
     uint16_t udma_mode = identify[88] & 0xff;
     uint16_t mdma_mode = identify[63] & 0xff;
-    api(MODULE_API_PRINT, MODULE_NAME, "DMA Modes\nUDMA: %x\nMDMA: %x\n", udma_mode, mdma_mode);
+    // api(MODULE_API_PRINT, MODULE_NAME, "DMA Modes\nUDMA: %x\nMDMA: %x\n", udma_mode, mdma_mode);
     int highest = 0;
     uint8_t dma = udma_mode != 0 ? udma_mode : mdma_mode;
     while(dma){
