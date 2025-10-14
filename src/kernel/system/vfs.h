@@ -55,6 +55,25 @@ typedef struct mount_funcs{
     void (*create)(char *filename, FS_FILE_FLAGS flags);
 }mount_t;
 
+typedef struct partition{
+    uint8_t attributes;
+    uint8_t chs_start[3];
+    uint8_t type;
+    uint8_t chs_end[3];
+    uint32_t lba_start;
+    uint32_t lba_size;
+}__attribute__((packed))partition_t;
+
+#define MBR_MAGIC 0xaa55
+
+typedef struct mbr{
+    char code[440];
+    char id[4];
+    char res[2];
+    partition_t partitions[4];
+    uint16_t magic;
+}__attribute__((packed)) mbr_t;
+
 void vfs_init();
 vfile_t *fcreate(char *name, VFILE_TYPE type, ...);
 void fdelete();
@@ -64,3 +83,4 @@ vfile_t *search_dir(char *name, vfile_t dir);
 vfile_t *fopen(char *name);
 void vfs_del_mount_handler(uint32_t key);
 void vfs_add_mount_handler(int (*mount_handler)(vfile_t *device, MOUNT_OPERATION op, ...), uint32_t key);
+void vfs_detect_partitions(vfile_t *file);

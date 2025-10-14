@@ -10,7 +10,39 @@ struct mount_handler{
     uint32_t key;
 }mount_handlers[32];
 
-
+void vfs_detect_partitions(vfile_t *file){
+    char *buffer = kmalloc(1);
+    fread(file, buffer, 0, 512);
+    mbr_t *mbr = buffer;
+    if(mbr->magic != MBR_MAGIC){
+        mlog(MODULE_NAME, "No MBR!\n", MLOG_PRINT);
+        mlog(MODULE_NAME, "Magic: %x\n", mbr->magic, MLOG_PRINT);
+        return;
+    }
+    for(int i = 0; i < 4; i++){
+        partition_t part = mbr->partitions[i];
+        if(part.type == 0xee){
+            mlog(MODULE_NAME, "Found gpt\n", MLOG_PRINT);
+            return;
+        }
+        char cat = {'a', 0};
+        char nfname[512] = {0};
+        if(part.attributes != 0 || part.attributes != 0x80){
+            //check disk for filesystem
+            mlog(MODULE_NAME, "No partitions in %s!\n", MLOG_PRINT, file->name);
+            strcpy(file->name, nfname);
+            strcat(nfname, cat);
+            char finalfname[512] = {0};
+            strcpy("/dev", finalfname);
+            strcat(nfname, finalfname);
+            // fcreate() new file representing partition
+            return;
+        }
+        //now, re-check for filesystems
+    }
+    mlog(MODULE_NAME, "Magic: %x\n", MLOG_PRINT, mbr->magic);
+    return;
+}
 
 void vfs_add_mount_handler(int (*mount_handler)(vfile_t *device, MOUNT_OPERATION op, ...), uint32_t key){
     if(mount_handler == 0){
