@@ -282,9 +282,10 @@ int ata_read(vfile_t *file, uint8_t *ptr, uint32_t offset, uint32_t count) {
     uint16_t io_base = drive.BARs[0] >> 2;
     uint16_t ctrl_base = drive.BARs[1] >> 2;
     uint16_t bm_base = drive.BARs[4] & ~3;
-
+    
     
     PRD_T *prdt = drive.PRDT;
+    api(MODULE_API_PRINT, MODULE_NAME, "%x, %x, %x, %x\n", io_base, ctrl_base, bm_base, api(MODULE_API_PADDR, prdt));
     uint32_t pages = (count + 4095) / 4096;
     
     uint32_t sector_count = pages*8;
@@ -347,7 +348,7 @@ int ata_read(vfile_t *file, uint8_t *ptr, uint32_t offset, uint32_t count) {
     
     uint8_t status = inb(ctrl_base);
     uint8_t bm_status = inb(bm_base + 2);
-    // api(MODULE_API_PRINT, MODULE_NAME, "Status: (ATA)%x, (Busmaster)%x\n", status, bm_status);
+    api(MODULE_API_PRINT, MODULE_NAME, "Status: (ATA)%x, (Busmaster)%x\n", status, bm_status);
     // if(ATA_ABRT(status)){
     //     puts(api, MODULE_NAME, "Command aborted\n");
     //     return -1;
@@ -498,28 +499,34 @@ void ide_init(uint32_t BARS[5]){
     }
     drives[primary_index].BARs[4] = BARS[4];
     drives[primary_slave_index].BARs[4] = BARS[4];
+    drives[primary_slave_index].flags.slave = 1;
     drives[secondary_index].BARs[4] = BARS[4];
     drives[secondary_slave_index].BARs[4] = BARS[4];
+    drives[secondary_slave_index].flags.slave = 1;
     
     uint32_t prdt_primary_paddr = api(MODULE_API_PMALLOC64K);
+    uint32_t prdt_primary_slave_paddr = api(MODULE_API_PMALLOC64K);
     uint32_t prdt_secondary_paddr = api(MODULE_API_PMALLOC64K);
+    uint32_t prdt_secondary_slave_paddr = api(MODULE_API_PMALLOC64K);
     drives[primary_index].PRDT = (void *)api(MODULE_API_KMALLOC_PADDR, prdt_primary_paddr, 16);
+    drives[primary_slave_index].PRDT = (void *)api(MODULE_API_KMALLOC_PADDR, prdt_primary_slave_paddr, 16);
     drives[secondary_index].PRDT = (void *)api(MODULE_API_KMALLOC_PADDR, prdt_secondary_paddr, 16);
+    drives[secondary_slave_index].PRDT = (void *)api(MODULE_API_KMALLOC_PADDR, prdt_secondary_slave_paddr, 16);
     //now call ATA IDENTIFY
     uint8_t master_status = ata_identify(primary_index, ATA_MASTER);
     uint8_t slave_status = ata_identify(primary_slave_index, ATA_SLAVE);
-    if(master_status){
+    if(!master_status){
         drives[primary_index].type = TYPE_NULL;
     }
-    if(slave_status){
+    if(!slave_status){
         drives[primary_slave_index].type = TYPE_NULL;
     }
     master_status = ata_identify(secondary_index, ATA_MASTER);
     slave_status = ata_identify(secondary_slave_index, ATA_SLAVE);
-    if(master_status){
+    if(!master_status){
         drives[secondary_index].type = TYPE_NULL;
     }
-    if(slave_status){
+    if(!slave_status){
         drives[secondary_slave_index].type = TYPE_NULL;
     }
     // outb(BARS[4] >> 1, 0x0);
