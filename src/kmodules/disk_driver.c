@@ -475,6 +475,8 @@ uint8_t ata_identify(uint32_t index, uint16_t disk){
         if(drives[i].type == TYPE_IDE) ata_drives++;
     }
     drives[index].type = TYPE_IDE;
+    uint32_t prdt_phys = api(MODULE_API_PMALLOC64K);
+    drives[index].PRDT = (void *)api(MODULE_API_KMALLOC_PADDR, prdt_phys, 16);
     itoa(ata_drives, fname + strlen(fname), 10);
     vfile_t *new_file = fcreate(api, fname, VFILE_DEVICE, ata_write, ata_read);
     new_file->mount_id = index;
@@ -503,15 +505,6 @@ void ide_init(uint32_t BARS[5]){
     drives[secondary_index].BARs[4] = BARS[4];
     drives[secondary_slave_index].BARs[4] = BARS[4];
     drives[secondary_slave_index].flags.slave = 1;
-    
-    uint32_t prdt_primary_paddr = api(MODULE_API_PMALLOC64K);
-    uint32_t prdt_primary_slave_paddr = api(MODULE_API_PMALLOC64K);
-    uint32_t prdt_secondary_paddr = api(MODULE_API_PMALLOC64K);
-    uint32_t prdt_secondary_slave_paddr = api(MODULE_API_PMALLOC64K);
-    drives[primary_index].PRDT = (void *)api(MODULE_API_KMALLOC_PADDR, prdt_primary_paddr, 16);
-    drives[primary_slave_index].PRDT = (void *)api(MODULE_API_KMALLOC_PADDR, prdt_primary_slave_paddr, 16);
-    drives[secondary_index].PRDT = (void *)api(MODULE_API_KMALLOC_PADDR, prdt_secondary_paddr, 16);
-    drives[secondary_slave_index].PRDT = (void *)api(MODULE_API_KMALLOC_PADDR, prdt_secondary_slave_paddr, 16);
     //now call ATA IDENTIFY
     uint8_t master_status = ata_identify(primary_index, ATA_MASTER);
     uint8_t slave_status = ata_identify(primary_slave_index, ATA_SLAVE);

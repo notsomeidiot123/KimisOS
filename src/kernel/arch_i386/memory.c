@@ -25,11 +25,10 @@ uint32_t pm_alloc(){
     }
 }
 uint32_t pm_alloc_index(uint32_t index){
-    // printf("%x\n", index);
-    for(uint32_t i = index; i < index + 2; i++){
+    for(uint32_t i = 0; i < 2; i++){
         for(int j = 0; j < 8; j++){
             // if(!(pm_map[i] & (1 << j))){
-            pm_map[i] |= (1 << j);
+            pm_map[i + index] |= (1 << j);
                 // }
         }
     }
@@ -39,7 +38,9 @@ uint32_t pm_alloc_64kaligned(){
     uint32_t cont = 0;
     uint32_t current = 0;
     for(uint32_t i = 0; i < mmap_count; i++){
-        // printf("Index: %x\n", i);
+        if(i & 1 && cont < 1){
+            continue;
+        }
         for(int j = 0; j < 8; j++){
             if(!(pm_map[i] & (1 << j))){
                 continue;
@@ -50,7 +51,6 @@ uint32_t pm_alloc_64kaligned(){
             }
         }
         if(cont == 1){
-            // printf("Allocating index: %x (%x)\n", i, pm_map[i]);
             return pm_alloc_index(current);
         }
         current = i;
