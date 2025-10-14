@@ -21,6 +21,8 @@ enum MODULE_API_FUNCS{
     MODULE_API_FREE, //free memory allocated by malloc
     MODULE_API_PMALLOC64K,
     MODULE_API_KMALLOC_PADDR,
+    MODULE_ADD_FS_HANDLER,
+    MODULE_DEL_FS_HANDLER,
 };
 
 typedef uint32_t (*KOS_MAPI_FP)(unsigned int function, ...);
@@ -40,6 +42,11 @@ typedef struct cpu_registers{
     uint32_t int_no, pfa;
     uint32_t eip, cs, eflags, useresp, ss;
 }__attribute__((packed))cpu_registers_t;
+
+typedef enum mount_ops{
+    MOUNT_NEW,
+    MOUNT_UNMOUNT,
+}MOUNT_OPERATION;
 
 typedef enum vfile_type{
     VFILE_POINTER,

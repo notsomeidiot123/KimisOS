@@ -5,9 +5,9 @@
 
 KOS_MAPI_FP api;
 
-void mount_fat32(vfile_t *dev_file, char *destination){
+// void mount_fat32(vfile_t *dev_file, char *destination){
     
-}
+// }
 
 void detect_partitions(vfile_t *file){
     char *buffer = malloc(api, 1);
@@ -18,8 +18,6 @@ void detect_partitions(vfile_t *file){
         api(MODULE_API_PRINT, MODULE_NAME, "Magic: %x\n", mbr->magic);
         return;
     }
-    //first: check for filesystem headers (if they exist, register entire drive as fs and return)
-    //then, check partitions.
     for(int i = 0; i < 4; i++){
         partition_t part = mbr->partitions[i];
         if(part.type == 0xee){
@@ -29,6 +27,7 @@ void detect_partitions(vfile_t *file){
         if(part.attributes != 0 || part.attributes != 0x80){
             //check disk for filesystem
             api(MODULE_API_PRINT, MODULE_NAME, "No partitions!\n");
+            
             return;
         }
         //now, re-check for filesystems

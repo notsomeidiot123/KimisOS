@@ -124,6 +124,15 @@ uint32_t module_api(uint32_t func, ...){
             uint32_t size = va_arg(vars, uint32_t);
             return_value = (uint32_t)kmalloc_page_paddr((uint32_t)paddr, size);
             break;
+        case MODULE_ADD_FS_HANDLER:
+            void *handler = va_arg(vars, void (*)(void *, uint32_t, ...));
+            key = va_arg(vars, uint32_t);
+            vfs_add_mount_handler(handler, key);
+            break;
+        case MODULE_DEL_FS_HANDLER:
+            key = va_arg(vars, uint32_t);
+            vfs_del_mount_handler(key);
+            break;
         
     }
     va_end(vars);

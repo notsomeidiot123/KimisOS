@@ -192,8 +192,8 @@ int ata_write(vfile_t *file, void *ptr, uint32_t offset, uint32_t count){
     if (count == 0) return -1;
     
     drive_t drive = drives[file->mount_id];
-    uint16_t io_base = drive.BARs[0] >> 2;
-    uint16_t ctrl_base = drive.BARs[1] >> 2;
+    uint16_t io_base = drive.BARs[0] &0xfffe;
+    uint16_t ctrl_base = drive.BARs[1] &0xfffe;
     uint16_t bm_base = drive.BARs[4] & ~3;
 
     
@@ -279,8 +279,8 @@ int ata_read(vfile_t *file, uint8_t *ptr, uint32_t offset, uint32_t count) {
     if (count == 0) return -1;
     
     drive_t drive = drives[file->mount_id];
-    uint16_t io_base = drive.BARs[0] >> 2;
-    uint16_t ctrl_base = drive.BARs[1] >> 2;
+    uint16_t io_base = drive.BARs[0] &0xfffe;
+    uint16_t ctrl_base = drive.BARs[1] &0xfffe;
     uint16_t bm_base = drive.BARs[4] & ~3;
     
     
@@ -388,8 +388,8 @@ cpu_registers_t *int_handler(cpu_registers_t * regs){
 //dma set 0x80 for udma
 //
 void ata_set_dma(uint32_t index, uint8_t dma_mode){
-    uint16_t bar0 = drives[index].BARs[0] >> 2;
-    uint16_t bar1 = drives[index].BARs[1] >> 2;
+    uint16_t bar0 = drives[index].BARs[0] &0xfffe;
+    uint16_t bar1 = drives[index].BARs[1] &0xfffe;
     
     while(!ata_ready(bar0, bar1, drives[index].flags.slave << 4));
     
@@ -414,8 +414,8 @@ void ata_set_dma(uint32_t index, uint8_t dma_mode){
 //return 2 if is SATA
 //return 3 if is SATAPI
 uint8_t ata_identify(uint32_t index, uint16_t disk){
-    uint16_t bar0 = drives[index].BARs[0] >> 2;
-    uint16_t bar1 = drives[index].BARs[1] >> 2;
+    uint16_t bar0 = drives[index].BARs[0] &0xfffe;
+    uint16_t bar1 = drives[index].BARs[1] &0xfffe;
     if(!ata_ready(bar0, bar1, disk & 0x10)){
         return -1;
     }
@@ -556,12 +556,12 @@ void init(KOS_MAPI_FP module_api, uint32_t api_version){
             fread(api, current_file, BARs, 0x10, 5);
             if(PCI_IDE_NATIVE(~progif)){
                 native_ide_present = 1;
-                BARs[0] = (ATA_PRIMARY_BUS) << 2 | 1;
-                BARs[1] = (ATA_PRIMARY_BUS + 0x206) << 2 | 1;
+                BARs[0] = (ATA_PRIMARY_BUS) | 1;
+                BARs[1] = (ATA_PRIMARY_BUS + 0x206) | 1;
             }
             if(PCI_IDE_SECONDARY_NATIVE(~progif)){
-                BARs[2] = (ATA_SECONDARY_BUS << 2) | 1;
-                BARs[3] = (ATA_SECONDARY_BUS + 0x206) << 2 | 1;
+                BARs[2] = (ATA_SECONDARY_BUS) | 1;
+                BARs[3] = (ATA_SECONDARY_BUS + 0x206) | 1;
             }
             ide_init(BARs);
         }

@@ -31,6 +31,8 @@ enum MODULE_API_FUNCS{
     MODULE_API_FREE, //free memory allocated by malloc
     MODULE_API_PMALLOC64K,
     MODULE_API_KMALLOC_PADDR,
+    MODULE_ADD_FS_HANDLER,
+    MODULE_DEL_FS_HANDLER,
 };
 
 typedef struct module{
