@@ -49,6 +49,7 @@ typedef enum mount_ops{
 }MOUNT_OPERATION;
 
 typedef enum vfile_type{
+    VFILE_NULL,
     VFILE_POINTER,
     VFILE_DEVICE,
     VFILE_MOUNT,

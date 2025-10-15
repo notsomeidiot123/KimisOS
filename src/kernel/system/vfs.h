@@ -2,6 +2,7 @@
 #include <stdint.h>
 
 typedef enum vfile_type{
+    VFILE_NULL,
     VFILE_POINTER,//virtual files
     VFILE_DEVICE,
     VFILE_MOUNT,//in the pointer passed to the function, must specify a read, write, open, create, and delete function.

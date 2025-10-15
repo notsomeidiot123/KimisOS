@@ -10,6 +10,26 @@ struct mount_handler{
     uint32_t key;
 }mount_handlers[32];
 
+int vfs_link_exists(vfile_t *file){
+    if(get_paddr(file) == 0 || file->type >= VFILE_MOUNT){
+        return 0;
+    }
+    return 1;
+}
+
+void vfs_write_part(vfile_t *file, void *data, uint32_t offset, uint32_t count){
+    if(!vfs_link_exists(file->parent) || count > file->size){
+        return;
+    }
+    fread(file->parent, data, offset + file->id, count);
+}
+void vfs_read_part(vfile_t *file, void *data, uint32_t offset, uint32_t count){
+    if(!vfs_link_exists(file->parent) || count > file->size){
+        return;
+    }
+    fwrite(file->parent, data, offset + file->id, count);
+}
+
 void vfs_detect_partitions(vfile_t *file){
     char *buffer = kmalloc(1);
     fread(file, buffer, 0, 512);
@@ -19,26 +39,31 @@ void vfs_detect_partitions(vfile_t *file){
         mlog(MODULE_NAME, "Magic: %x\n", mbr->magic, MLOG_PRINT);
         return;
     }
+    char cat[2] = {'a', 0};
+    char nfname[512] = {0};
+    strcpy(file->name, nfname);
+    strcat(cat, nfname);
+    char finalfname[512] = {0};
+    strcpy("/dev/", finalfname);
+    strcat(nfname, finalfname);
     for(int i = 0; i < 4; i++){
         partition_t part = mbr->partitions[i];
         if(part.type == 0xee){
             mlog(MODULE_NAME, "Found gpt\n", MLOG_PRINT);
             return;
         }
-        char cat = {'a', 0};
-        char nfname[512] = {0};
-        if(part.attributes != 0 || part.attributes != 0x80){
+        if((part.attributes != 0 && part.attributes != 0x80) ){
             //check disk for filesystem
-            mlog(MODULE_NAME, "No partitions in %s!\n", MLOG_PRINT, file->name);
-            strcpy(file->name, nfname);
-            strcat(nfname, cat);
-            char finalfname[512] = {0};
-            strcpy("/dev", finalfname);
-            strcat(nfname, finalfname);
+            mlog(MODULE_NAME, "No partitions in %s\n", MLOG_PRINT, file->name);
             // fcreate() new file representing partition
+            vfile_t *nfile = fcreate(finalfname, VFILE_DEVICE, vfs_write_part, vfs_read_part);
+            nfile->id = 0;
+            nfile->size = file->size;
+            nfile->parent = file;
             return;
         }
-        //now, re-check for filesystems
+        
+        finalfname[strlen(finalfname)-1]++;
     }
     mlog(MODULE_NAME, "Magic: %x\n", MLOG_PRINT, mbr->magic);
     return;
